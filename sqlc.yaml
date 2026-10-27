@@ -1,0 +1,23 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "queries.sql"
+    schema: "schema.sql"
+    gen:
+      go:
+        package: "gotopo"
+        out: "gotopo"
+        sql_package: "pgx/v5"
+        overrides:
+          - db_type: "geometry"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "MultiLineString"
+
+          - db_type: "geometry"
+            nullable: true
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "MultiLineString"

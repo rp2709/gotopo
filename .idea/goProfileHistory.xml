@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GoProfileHistory">
+    <profile entry="$USER_HOME$/GoLandProfiles/go_build_gotopo-heap_with_gc-2026-10-27-153249-054.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793111568327" />
+        <option name="file" value="go_build_gotopo-heap_with_gc-2026-10-27-153249-054.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="HEAP_GC" />
+      </GoProfileMapEntry>
+    </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/go_build_gotopo-allocs-2026-10-27-153319-395.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793111598347" />
+        <option name="file" value="go_build_gotopo-allocs-2026-10-27-153319-395.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="ALLOCS" />
+      </GoProfileMapEntry>
+    </profile>
+  </component>
+</project>
