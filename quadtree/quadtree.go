@@ -1,6 +1,9 @@
 package quadtree
 
-import "slices"
+import (
+	"math"
+	"slices"
+)
 
 type Point struct {
 	X, Y float64
@@ -28,6 +31,10 @@ func (q *QuadTree[T]) Insert(object T) {
 
 func (q *QuadTree[T]) GetWithin(distance float64, from Point) []T {
 	return q.root.getWithin(distance, from)
+}
+
+func (q *QuadTree[T]) GetNearest(from Point) T {
+	return q.root.getNearest(from)
 }
 
 // NewQuadTree creates a new quadtree with capacity at each leaf, set to contain points within range
@@ -216,4 +223,25 @@ func (p1 Point) isWithin(distance float64, p2 Point) bool {
 	ds := dxs + dys
 	wds := distance * distance
 	return ds <= wds
+}
+
+func (n *node[T]) getNearest(from Point) T {
+	if n.isLeaf {
+		if n.objects == nil {
+			panic("get on empty quad tree")
+		}
+		minDist := math.MaxFloat64
+		minIndex := -1
+		for index, object := range n.objects {
+			dx := from.X - object.Coordinates().X
+			dy := from.Y - object.Coordinates().Y
+			dist := dx*dx + dy*dy
+			if dist < minDist {
+				minDist = dist
+				minIndex = index
+			}
+		}
+		return n.objects[minIndex]
+	}
+	return n.quadrant(from).getNearest(from)
 }

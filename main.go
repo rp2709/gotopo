@@ -5,7 +5,6 @@ import (
 	"gotopo/gotopo"
 	"gotopo/quadtree"
 	"log"
-	"math"
 
 	"github.com/jackc/pgx/v5"
 	pgxgeom "github.com/twpayne/pgx-geom"
@@ -20,6 +19,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close(ctx)
+	log.Default().Println("Connected to database")
 
 	err = pgxgeom.Register(ctx, conn)
 	if err != nil {
@@ -28,55 +28,29 @@ func main() {
 
 	queries := gotopo.New(conn)
 
-	roadindex := getRoadIndex(GetRoadPoints(queries, ctx))
+	// road points live in this buffer
+	log.Default().Println("Start loading roads")
+	roadPoints := GetRoadPoints(queries, ctx)
+	log.Default().Println("Loaded all roads")
 
-	println("index size", roadindex.Size())
-	println("index max depth", roadindex.MaxDepth())
+	log.Default().Println("Start constructing graph")
+	graph := ConstructGraph(roadPoints, quadtree.Point{2540215.68, 1181115.23}, 0.5)
+	log.Default().Println("Graph created")
 
-	clicked_point := quadtree.Point{2540215.90, 1181115.26}
-	adjacentRoads := roadindex.GetWithin(3, clicked_point)
-
-	println("adjacent roads")
-	for _, road := range adjacentRoads {
-		println(road.Road.Gid)
-	}
-}
-
-type Road struct {
-	Gid   int32
-	Start *RoadPoint
-	End   *RoadPoint
+	// save graph to database
+	println("n :", len(graph.Vertices))
+	println("m :", len(graph.Edges))
 }
 
 type RoadPoint struct {
-	Road  *Road
+	Start bool
+	Other *RoadPoint
 	Point quadtree.Point
+	Gid   int32 //id of the original swisstlm3d strasse
 }
 
 func (r RoadPoint) Coordinates() quadtree.Point {
 	return r.Point
-}
-
-func getRoadIndex(roadPoints *[]RoadPoint) *quadtree.QuadTree[RoadPoint] {
-	minX := math.MaxFloat64
-	minY := math.MaxFloat64
-	maxX := -math.MaxFloat64
-	maxY := -math.MaxFloat64
-
-	for _, roadPoint := range *roadPoints {
-		minX = min(minX, roadPoint.Point.X)
-		minY = min(minY, roadPoint.Point.Y)
-		maxX = max(maxX, roadPoint.Point.X)
-		maxY = max(maxY, roadPoint.Point.Y)
-	}
-
-	roadindex := quadtree.NewQuadTree[RoadPoint](20, minX, maxX, minY, maxY)
-
-	for _, roadPoint := range *roadPoints {
-		roadindex.Insert(roadPoint)
-	}
-
-	return roadindex
 }
 
 func GetRoadPoints(queries *gotopo.Queries, ctx context.Context) *[]RoadPoint {
@@ -84,22 +58,27 @@ func GetRoadPoints(queries *gotopo.Queries, ctx context.Context) *[]RoadPoint {
 	if err != nil {
 		log.Fatal(err)
 	}
-	roadPoints := make([]RoadPoint, 0, 2*len(roads))
+	roadPoints := make([]RoadPoint, 0, 2*len(roads)) // important to pre-allocate so pointers are stable (for indexing)
 	for _, road := range roads {
-		rs := &Road{Gid: road.Gid.Int32}
 		coords := road.Geom.LineString(0).Coords()
 		start := coords[0]
 		end := coords[len(coords)-1]
 
 		roadPoints = append(roadPoints,
 			RoadPoint{
-				Road:  rs,
 				Point: quadtree.Point{X: start.X(), Y: start.Y()},
+				Gid:   road.Gid.Int32,
+				Start: true,
 			},
 			RoadPoint{
-				Road:  rs,
 				Point: quadtree.Point{X: end.X(), Y: end.Y()},
+				Gid:   road.Gid.Int32,
+				Start: false,
 			})
+
+		// link the two ends of the segment
+		roadPoints[len(roadPoints)-1].Other = &roadPoints[len(roadPoints)-2]
+		roadPoints[len(roadPoints)-2].Other = &roadPoints[len(roadPoints)-1]
 	}
 	return &roadPoints
 }
