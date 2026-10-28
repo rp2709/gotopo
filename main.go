@@ -7,7 +7,6 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/twpayne/go-geom"
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
@@ -42,21 +41,11 @@ func main() {
 	println("n :", len(graph.Vertices))
 	println("m :", len(graph.Edges))
 
-	println("start writing vertices")
-	fivePercentOfVertices := len(graph.Vertices) / 20
-	for i, vertex := range graph.Vertices {
-		v := gotopo.InsertVertexParams{
-			Vid: vertex.Vid,
-		}
-		v.Location.SetSRID(2056).SetCoords(geom.Coord{vertex.Location.X, vertex.Location.Y})
-		err := queries.InsertVertex(ctx, v)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if i%fivePercentOfVertices == 0 {
-			println(i*100/len(graph.Vertices), "%")
-		}
+	log.Default().Println("Start saving graph")
+	if err := SaveGraph(ctx, conn, graph); err != nil {
+		log.Fatal(err)
 	}
+	log.Default().Println("Graph saved")
 
 	println("done")
 }
