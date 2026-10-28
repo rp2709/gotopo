@@ -32,3 +32,25 @@ CREATE TABLE "swisstlm3d_strassen_strasse" (gid serial,
 "geom" geometry(MultiLineStringZM));
 ALTER TABLE "swisstlm3d_strassen_strasse" ADD PRIMARY KEY (gid);
 --SELECT AddGeometryColumn('','swisstlm3d_strassen_strasse','geom','0','MULTILINESTRING',4);
+
+CREATE TABLE vertices (
+                          vid      INTEGER PRIMARY KEY,
+                          location geometry(Point, 2056) NOT NULL
+);
+
+CREATE TABLE edges (
+                       gid       INTEGER PRIMARY KEY,
+                       start_vid INTEGER NOT NULL REFERENCES vertices(vid),
+                       end_vid   INTEGER NOT NULL REFERENCES vertices(vid),
+
+                       CHECK (start_vid <> end_vid)
+);
+
+CREATE INDEX vertices_location_gix
+    ON vertices USING GIST (location);
+
+CREATE INDEX edges_start_vid_idx
+    ON edges (start_vid);
+
+CREATE INDEX edges_end_vid_idx
+    ON edges (end_vid);

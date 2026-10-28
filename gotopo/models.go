@@ -9,6 +9,12 @@ import (
 	geom "github.com/twpayne/go-geom"
 )
 
+type Edge struct {
+	Gid      int32
+	StartVid int32
+	EndVid   int32
+}
+
 type Swisstlm3dStrassenStrasse struct {
 	Gid        pgtype.Int4
 	Uuid       pgtype.Text
@@ -39,4 +45,9 @@ type Swisstlm3dStrassenStrasse struct {
 	Verkehrsbd pgtype.Text
 	Strname    pgtype.Text
 	Geom       geom.MultiLineString
+}
+
+type Vertex struct {
+	Vid      int32
+	Location geom.Point
 }

@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/twpayne/go-geom"
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
@@ -20,7 +21,6 @@ func main() {
 	}
 	defer conn.Close(ctx)
 	log.Default().Println("Connected to database")
-
 	err = pgxgeom.Register(ctx, conn)
 	if err != nil {
 		log.Fatal(err)
@@ -36,11 +36,32 @@ func main() {
 	log.Default().Println("Start constructing graph")
 	graph := ConstructGraph(roadPoints, quadtree.Point{2540215.68, 1181115.23}, 0.5)
 	log.Default().Println("Graph created")
+	clear(*roadPoints)
 
 	// save graph to database
 	println("n :", len(graph.Vertices))
 	println("m :", len(graph.Edges))
+
+	println("start writing vertices")
+	fivePercentOfVertices := len(graph.Vertices) / 20
+	for i, vertex := range graph.Vertices {
+		v := gotopo.InsertVertexParams{
+			Vid: vertex.Vid,
+		}
+		v.Location.SetSRID(2056).SetCoords(geom.Coord{vertex.Location.X, vertex.Location.Y})
+		err := queries.InsertVertex(ctx, v)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if i%fivePercentOfVertices == 0 {
+			println(i*100/len(graph.Vertices), "%")
+		}
+	}
+
+	println("done")
 }
+
+// ------------------ structs and helpers -----------------------------------
 
 type RoadPoint struct {
 	Start bool

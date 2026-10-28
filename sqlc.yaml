@@ -21,3 +21,9 @@ sql:
               import: "github.com/twpayne/go-geom"
               package: "geom"
               type: "MultiLineString"
+
+          - column: "vertices.location"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "Point"
