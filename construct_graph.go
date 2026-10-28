@@ -1,27 +1,31 @@
 package main
 
 import (
-	"context"
 	"gotopo/gotopo"
 	"gotopo/quadtree"
 	"gotopo/queue"
-	"log"
+	"log/slog"
 	"math"
+
+	"github.com/twpayne/go-geom"
 )
 
 const none int32 = -1
 
-/** ConstructGraph reads roads from database and constructs graph
+/** ConstructGraph constructs graph from roads
  * conceptually, it starts at a given location and treats points in cluster
  * a cluster is a set of points that are within epsilon distance of each other
  */
-func ConstructGraph(queries *gotopo.Queries, ctx context.Context, startingLocation quadtree.Point, epsilon float64) *Graph {
-	roadPoints, srid := getRoadPointsAndSrid(queries, ctx)
+func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point, epsilon float64) Graph {
+	roadPoints := getRoadPoints(roads)
 
 	graph := Graph{
-		Vertices: make([]Vertex, 0),
-		Edges:    make([]Edge, 0),
-		Srid:     srid,
+		Vertices: make([]gotopo.Vertex, 0),
+		Edges:    make([]gotopo.Edge, 0),
+	}
+
+	if len(roadPoints) == 0 {
+		return graph
 	}
 
 	var nextVertexId int32 = 0
@@ -31,7 +35,7 @@ func ConstructGraph(queries *gotopo.Queries, ctx context.Context, startingLocati
 	// queue fifo of RoadPoints to explore next
 	opened := queue.NewRingBuffer[*RoadPoint](50000)
 
-	incompleteEdges := make(map[int32]Edge)
+	incompleteEdges := make(map[int32]gotopo.Edge)
 
 	startRoadPoint := roadPointsIndex.GetNearest(startingLocation)
 	opened.Push(startRoadPoint)
@@ -40,37 +44,41 @@ func ConstructGraph(queries *gotopo.Queries, ctx context.Context, startingLocati
 	for opened.Len() > 0 { // while there are opened ends
 		// get cluster that may be considered as a single vertex
 		cluster := roadPointsIndex.GetWithin(epsilon, opened.Pop().Point)
-		vertex := Vertex{
-			Location: cluster[0].Point,
+		location := cluster[0].Point
+		vertex := gotopo.Vertex{
 			Vid:      nextVertexId,
+			Location: *geom.NewPointFlat(geom.XY, []float64{location.X, location.Y}).SetSRID(cluster[0].Road.Geom.SRID()),
 		}
 		nextVertexId++
 		graph.Vertices = append(graph.Vertices, vertex)
 
 		// create new edge or attach to incomplete
 		for _, point := range cluster {
-			if incompleteEdge, ok := incompleteEdges[point.Gid]; ok {
+			gid := point.Road.Gid.Int32
+			if edge, ok := incompleteEdges[gid]; ok {
 				// attach to existing incomplete edge
-				edge := incompleteEdge
 				if point.Start {
-					if incompleteEdge.start != none {
+					if edge.StartVid != none {
 						panic("incomplete edge already has a start")
 					}
-					edge.start = vertex.Vid
+					edge.StartVid = vertex.Vid
 				} else {
-					if incompleteEdge.end != none {
+					if edge.EndVid != none {
 						panic("incomplete edge already has an end")
 					}
-					edge.end = vertex.Vid
+					edge.EndVid = vertex.Vid
 				}
-				delete(incompleteEdges, point.Gid)
+				delete(incompleteEdges, gid)
+				if edge.StartVid == none || edge.EndVid == none {
+					panic("Incomplete edge marked as complete")
+				}
 				graph.Edges = append(graph.Edges, edge)
 			} else {
 				// create new edge
 				if point.Start {
-					incompleteEdges[point.Gid] = Edge{vertex.Vid, none, point.Gid}
+					incompleteEdges[gid] = gotopo.Edge{Gid: gid, StartVid: vertex.Vid, EndVid: none}
 				} else {
-					incompleteEdges[point.Gid] = Edge{none, vertex.Vid, point.Gid}
+					incompleteEdges[gid] = gotopo.Edge{Gid: gid, StartVid: none, EndVid: vertex.Vid}
 				}
 				// add other end to the queue if not equivalent to other opened point
 				if len(exploredIndex.GetWithin(epsilon, point.Other.Point)) == 0 {
@@ -80,45 +88,32 @@ func ConstructGraph(queries *gotopo.Queries, ctx context.Context, startingLocati
 			}
 		}
 	}
-	return &graph
+	return graph
 }
 
 type Graph struct {
-	Srid     int
-	Vertices []Vertex
-	Edges    []Edge
+	Vertices []gotopo.Vertex
+	Edges    []gotopo.Edge // Geom empty until DoubleEdges
 }
 
-type Vertex struct {
-	Vid      int32
-	Location quadtree.Point
-}
-
-func (v *Vertex) Coordinates() quadtree.Point { return v.Location }
-
-type Edge struct {
-	start int32
-	end   int32
-	gid   int32
-}
-
-func getRoadIndex(roadPoints *[]RoadPoint) (*quadtree.QuadTree[*RoadPoint], *quadtree.QuadTree[*RoadPoint]) {
+func getRoadIndex(roadPoints []RoadPoint) (*quadtree.QuadTree[*RoadPoint], *quadtree.QuadTree[*RoadPoint]) {
 	minX := math.MaxFloat64
 	minY := math.MaxFloat64
 	maxX := -math.MaxFloat64
 	maxY := -math.MaxFloat64
 
-	for _, roadPoint := range *roadPoints {
-		minX = min(minX, roadPoint.Point.X)
-		minY = min(minY, roadPoint.Point.Y)
-		maxX = max(maxX, roadPoint.Point.X)
-		maxY = max(maxY, roadPoint.Point.Y)
+	for i := range roadPoints {
+		p := &roadPoints[i].Point
+		minX = min(minX, p.X)
+		minY = min(minY, p.Y)
+		maxX = max(maxX, p.X)
+		maxY = max(maxY, p.Y)
 	}
 
 	roadIndex := quadtree.NewQuadTree[*RoadPoint](20, minX, maxX, minY, maxY)
 
-	for _, roadPoint := range *roadPoints {
-		roadIndex.Insert(&roadPoint)
+	for i := range roadPoints {
+		roadIndex.Insert(&roadPoints[i])
 	}
 
 	exploredIndex := quadtree.NewQuadTree[*RoadPoint](20, minX, maxX, minY, maxY)
@@ -130,33 +125,39 @@ type RoadPoint struct {
 	Start bool
 	Other *RoadPoint
 	Point quadtree.Point
-	Gid   int32 //id of the original swisstlm3d strasse
+	Road  *gotopo.GetRoadsRow // original swisstlm3d strasse
 }
 
-func (r RoadPoint) Coordinates() quadtree.Point {
+func (r *RoadPoint) Coordinates() quadtree.Point {
 	return r.Point
 }
 
-func getRoadPointsAndSrid(queries *gotopo.Queries, ctx context.Context) (*[]RoadPoint, int) {
-	roads, err := queries.GetRoads(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	roadPoints := make([]RoadPoint, 0, 2*len(roads)) // important to pre-allocate so pointers are stable (for indexing)
-	for _, road := range roads {
-		coords := road.Geom.LineString(0).Coords()
-		start := coords[0]
-		end := coords[len(coords)-1]
+func getRoadPoints(roads []gotopo.GetRoadsRow) []RoadPoint {
+	roadPoints := make([]RoadPoint, 0, 2*len(roads)) // important to pre-allocate so pointers are stable
+	for i := range roads {
+		road := &roads[i]
+		if road.Geom.NumLineStrings() == 0 {
+			slog.Warn("Skipping road without geometry", "gid", road.Gid.Int32)
+			continue
+		}
+		line := road.Geom.LineString(0)
+		flat := line.FlatCoords()
+		stride := line.Stride()
+		if len(flat) < stride || stride < 2 {
+			slog.Warn("Skipping road with empty line string", "gid", road.Gid.Int32)
+			continue
+		}
+		last := len(flat) - stride
 
 		roadPoints = append(roadPoints,
 			RoadPoint{
-				Point: quadtree.Point{X: start.X(), Y: start.Y()},
-				Gid:   road.Gid.Int32,
+				Point: quadtree.Point{X: flat[0], Y: flat[1]},
+				Road:  road,
 				Start: true,
 			},
 			RoadPoint{
-				Point: quadtree.Point{X: end.X(), Y: end.Y()},
-				Gid:   road.Gid.Int32,
+				Point: quadtree.Point{X: flat[last], Y: flat[last+1]},
+				Road:  road,
 				Start: false,
 			})
 
@@ -164,5 +165,5 @@ func getRoadPointsAndSrid(queries *gotopo.Queries, ctx context.Context) (*[]Road
 		roadPoints[len(roadPoints)-1].Other = &roadPoints[len(roadPoints)-2]
 		roadPoints[len(roadPoints)-2].Other = &roadPoints[len(roadPoints)-1]
 	}
-	return &roadPoints, roads[0].Geom.SRID()
+	return roadPoints
 }

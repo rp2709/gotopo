@@ -1,9 +1,8 @@
 package main
 
 import (
-	"context"
 	"gotopo/gotopo"
-	"log"
+	"log/slog"
 	"math"
 
 	"github.com/twpayne/go-geom"
@@ -11,94 +10,97 @@ import (
 
 // applies a series of transformations to the edges of a graph to get directional location of edges
 
-// DoubleEdges : double each edge (with exceptions) and associate geometry (use gotopo/InsertEdgesParams)
-func DoubleEdges(simpleEdges *[]Edge, ctx context.Context, queries *gotopo.Queries) *[]gotopo.InsertEdgeParams {
-	// get all roads from db
-	roads, err := queries.GetRoads(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// construct index of roads by gid
-	roadsIndex := make(map[int32]*gotopo.GetRoadsRow)
+// DoubleEdges : double each edge (with exceptions) and associate its offset geometry
+func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo.Edge {
+	// construct index of roads by gid (pointers into the shared slice, no copies)
+	roadsIndex := make(map[int32]*gotopo.GetRoadsRow, len(roads))
 	for i := range roads {
 		roadsIndex[roads[i].Gid.Int32] = &roads[i]
 	}
 
 	// construct slice of edges
-	edges := make([]gotopo.InsertEdgeParams, 0, len(*simpleEdges)*2) // we will potentially double the number of simple edges
-	for _, edge := range *simpleEdges {
-		correspondingRoad, ok := roadsIndex[edge.gid]
+	edges := make([]gotopo.Edge, 0, len(simpleEdges)*2) // we will potentially double the number of simple edges
+	for i := range simpleEdges {
+		edge := &simpleEdges[i]
+		correspondingRoad, ok := roadsIndex[edge.Gid]
 		if !ok {
 			continue
 		}
+		if correspondingRoad.Geom.NumLineStrings() == 0 {
+			slog.Warn("Skipping edge of road without geometry", "gid", edge.Gid)
+			continue
+		}
+		// shares the road's flat coordinates: only read from it
+		line := correspondingRoad.Geom.LineString(0)
+		if line.Stride() < 2 || len(line.FlatCoords()) < line.Stride() {
+			slog.Warn("Skipping edge of road without geometry", "gid", edge.Gid)
+			continue
+		}
+		srid := correspondingRoad.Geom.SRID()
+		displacement := roadWidth(correspondingRoad) / 2
+
 		// add in original direction
-		edges = append(edges, gotopo.InsertEdgeParams{
-			Gid:      edge.gid,
-			StartVid: edge.start,
-			EndVid:   edge.end,
-			Geom:     *correspondingRoad.Geom.Clone(), // deep copy: the geometry is modified later
+		edges = append(edges, gotopo.Edge{
+			Gid:      edge.Gid,
+			StartVid: edge.StartVid,
+			EndVid:   edge.EndVid,
+			Geom:     offsetLine(line, srid, displacement, false),
 		})
 
 		if shouldSplit(correspondingRoad) {
 			// add in reverse direction
-			// deep copy, otherwise Reverse() would also reverse the original (shared flat coords)
-			reversedGeometry := *correspondingRoad.Geom.Clone()
-			reversedGeometry.Reverse()
-			edges = append(edges, gotopo.InsertEdgeParams{
-				Gid:      edge.gid,
-				StartVid: edge.end,
-				EndVid:   edge.start,
-				Geom:     reversedGeometry,
+			edges = append(edges, gotopo.Edge{
+				Gid:      edge.Gid,
+				StartVid: edge.EndVid,
+				EndVid:   edge.StartVid,
+				Geom:     offsetLine(line, srid, displacement, true),
 			})
 		}
 	}
 
-	offsetGeometry(&edges, &roadsIndex)
-
-	return &edges
+	return edges
 }
 
 func shouldSplit(road *gotopo.GetRoadsRow) bool {
 	return true
 }
 
-// offset_geometry : offset each edge by a small amount to get directional location of edges (use gotopo/InsertEdgesParams)
-func offsetGeometry(edges *[]gotopo.InsertEdgeParams, roadIndex *map[int32]*gotopo.GetRoadsRow) {
-	for i := range *edges {
-		edge := &(*edges)[i] // pointer to be able to modify the element
-		displacement := roadWidth((*roadIndex)[edge.Gid]) / 2
+// offsetLine : build a new line (one fresh flat buffer) from source, optionally reversed, with each point
+// offset perpendicularly to its segment. Displacements are always computed from the unmodified source.
+func offsetLine(source *geom.LineString, srid int, displacement float64, reverse bool) geom.LineString {
+	src := source.FlatCoords()
+	stride := source.Stride()
+	n := len(src) / stride
 
-		// Coords() returns a deep copy of all linestrings (each point has the full stride, e.g. X, Y, Z)
-		lines := edge.Geom.Coords()
-		newLines := make([][]geom.Coord, len(lines))
-		for l, line := range lines {
-			newLine := make([]geom.Coord, len(line))
-			for c, current := range line {
-				// copy the coordinate to keep every dimension (Z, M) so the stride matches the layout
-				newCoord := make(geom.Coord, len(current))
-				copy(newCoord, current)
-
-				if len(line) > 1 {
-					var displacementX, displacementY float64
-					if c < len(line)-1 {
-						displacementX, displacementY = displacementVector(displacement, current, line[c+1])
-					} else {
-						displacementX, displacementY = displacementVector(displacement, line[c-1], current)
-					}
-					newCoord[0] += displacementX
-					newCoord[1] += displacementY
-				}
-				newLine[c] = newCoord
-			}
-			newLines[l] = newLine
+	// offset in src of the k-th point of the output line
+	sourceOffset := func(k int) int {
+		if reverse {
+			return (n - 1 - k) * stride
 		}
+		return k * stride
+	}
 
-		// set coordinates on the whole MultiLineString (LineString(i) only returns a temporary copy)
-		if _, err := edge.Geom.SetCoords(newLines); err != nil {
-			log.Fatal(err)
+	dst := make([]float64, n*stride)
+	for k := 0; k < n; k++ {
+		current := sourceOffset(k)
+		out := k * stride
+		// keep every dimension (Z, M) so the stride matches the layout
+		copy(dst[out:out+stride], src[current:current+stride])
+
+		if n > 1 {
+			var from, to int
+			if k < n-1 {
+				from, to = current, sourceOffset(k+1)
+			} else {
+				from, to = sourceOffset(k-1), current
+			}
+			displacementX, displacementY := displacementVector(displacement, src[from:from+stride], src[to:to+stride])
+			dst[out] += displacementX
+			dst[out+1] += displacementY
 		}
 	}
+
+	return *geom.NewLineStringFlat(source.Layout(), dst).SetSRID(srid)
 }
 
 func displacementVector(displacement float64, start geom.Coord, end geom.Coord) (float64, float64) {
