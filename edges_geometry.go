@@ -24,19 +24,11 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 		edge := &simpleEdges[i]
 		correspondingRoad, ok := roadsIndex[edge.Gid]
 		if !ok {
-			continue
-		}
-		if correspondingRoad.Geom.NumLineStrings() == 0 {
-			slog.Warn("Skipping edge of road without geometry", "gid", edge.Gid)
+			slog.Warn("Skipping edge that does not correspond to a swisstlm3d strasse")
 			continue
 		}
 		// shares the road's flat coordinates: only read from it
 		line := correspondingRoad.Geom.LineString(0)
-		if line.Stride() < 2 || len(line.FlatCoords()) < line.Stride() {
-			slog.Warn("Skipping edge of road without geometry", "gid", edge.Gid)
-			continue
-		}
-		srid := correspondingRoad.Geom.SRID()
 		displacement := roadWidth(correspondingRoad) / 2
 
 		// add in original direction
@@ -44,7 +36,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 			Gid:      edge.Gid,
 			StartVid: edge.StartVid,
 			EndVid:   edge.EndVid,
-			Geom:     offsetLine(line, srid, displacement, false),
+			Geom:     offsetLine(line, displacement, false),
 		})
 
 		if shouldSplit(correspondingRoad) {
@@ -53,7 +45,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 				Gid:      edge.Gid,
 				StartVid: edge.EndVid,
 				EndVid:   edge.StartVid,
-				Geom:     offsetLine(line, srid, displacement, true),
+				Geom:     offsetLine(line, displacement, true),
 			})
 		}
 	}
@@ -62,45 +54,34 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 }
 
 func shouldSplit(road *gotopo.GetRoadsRow) bool {
-	return false
+	return true
 }
 
-// offsetLine : build a new line (one fresh flat buffer) from source, optionally reversed, with each point
-// offset perpendicularly to its segment. Displacements are always computed from the unmodified source.
-func offsetLine(source *geom.LineString, srid int, displacement float64, reverse bool) geom.LineString {
-	src := source.FlatCoords()
-	stride := source.Stride()
-	n := len(src) / stride
+func offsetLine(line *geom.LineString, displacement float64, reverse bool) geom.LineString {
+	var displacementX, displacementY float64
+	newCoords := make([]geom.Coord, len(line.Coords()))
 
-	// offset in src of the k-th point of the output line
-	sourceOffset := func(k int) int {
+	index := func(it int) int {
 		if reverse {
-			return (n - 1 - k) * stride
+			return len(line.Coords()) - it - 1
 		}
-		return k * stride
+		return it
 	}
 
-	dst := make([]float64, n*stride)
-	for k := range n {
-		current := sourceOffset(k)
-		out := k * stride
-		// keep every dimension (Z, M) so the stride matches the layout
-		copy(dst[out:out+stride], src[current:current+stride])
-
-		if n > 1 {
-			var from, to int
-			if k < n-1 {
-				from, to = current, sourceOffset(k+1)
-			} else {
-				from, to = sourceOffset(k-1), current
-			}
-			displacementX, displacementY := displacementVector(displacement, src[from:from+stride], src[to:to+stride])
-			dst[out] += displacementX
-			dst[out+1] += displacementY
+	for iteration := range line.Coords() {
+		current := line.Coords()[index(iteration)]
+		if iteration < len(line.Coords())-1 {
+			displacementX, displacementY = displacementVector(displacement, current, line.Coords()[index(iteration+1)])
+		} else {
+			displacementX, displacementY = displacementVector(displacement, line.Coords()[index(iteration-1)], current)
 		}
+
+		newCoords[index(iteration)] = geom.Coord{
+			current.X() + displacementX,
+			current.Y() + displacementY}
 	}
 
-	return *geom.NewLineStringFlat(geom.XY, dst).SetSRID(srid)
+	return *geom.NewLineString(geom.XY).SetSRID(line.SRID()).MustSetCoords(newCoords)
 }
 
 func displacementVector(displacement float64, start geom.Coord, end geom.Coord) (float64, float64) {

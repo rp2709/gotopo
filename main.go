@@ -14,6 +14,7 @@ import (
 const ConnectionString = "user=postgres dbname=swisstlm3d sslmode=prefer host=localhost password=postgres"
 
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelDebug)
 	slog.Info("Connecting to database")
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, ConnectionString)
@@ -37,9 +38,11 @@ func main() {
 
 	slog.Info("Constructing graph")
 	graph := ConstructGraph(roadsBuffer, quadtree.Point{X: 2540215.68, Y: 1181115.23}, 0.5)
+	slog.Debug("Graph created with n=", len(graph.Vertices), " and m=", len(graph.Edges))
 
 	slog.Info("Separating and locating edges")
 	graph.Edges = DoubleEdges(graph.Edges, roadsBuffer)
+	slog.Debug("Edges after separation : ", len(graph.Edges))
 
 	slog.Info("Saving graph")
 	err = SaveGraph(ctx, conn, graph)
