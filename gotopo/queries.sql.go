@@ -84,13 +84,6 @@ func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
 	return err
 }
 
-type InsertEdgesParams struct {
-	Gid      int32
-	StartVid int32
-	EndVid   int32
-	Geom     geom.MultiLineString
-}
-
 const insertVertex = `-- name: InsertVertex :exec
 INSERT INTO vertices (vid, location)
 VALUES ($1, $2)
@@ -104,9 +97,4 @@ type InsertVertexParams struct {
 func (q *Queries) InsertVertex(ctx context.Context, arg InsertVertexParams) error {
 	_, err := q.db.Exec(ctx, insertVertex, arg.Vid, arg.Location)
 	return err
-}
-
-type InsertVerticesParams struct {
-	Vid      int32
-	Location geom.Point
 }

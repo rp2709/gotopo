@@ -28,18 +28,22 @@ func DoubleEdges(simpleEdges *[]Edge, ctx context.Context, queries *gotopo.Queri
 	// construct slice of edges
 	edges := make([]gotopo.InsertEdgeParams, 0, len(*simpleEdges)*2) // we will potentially double the number of simple edges
 	for _, edge := range *simpleEdges {
-		correspondingRoad := roadsIndex[edge.gid]
+		correspondingRoad, ok := roadsIndex[edge.gid]
+		if !ok {
+			continue
+		}
 		// add in original direction
 		edges = append(edges, gotopo.InsertEdgeParams{
 			Gid:      edge.gid,
 			StartVid: edge.start,
 			EndVid:   edge.end,
-			Geom:     correspondingRoad.Geom,
+			Geom:     *correspondingRoad.Geom.Clone(), // deep copy: the geometry is modified later
 		})
 
 		if shouldSplit(correspondingRoad) {
 			// add in reverse direction
-			reversedGeometry := correspondingRoad.Geom
+			// deep copy, otherwise Reverse() would also reverse the original (shared flat coords)
+			reversedGeometry := *correspondingRoad.Geom.Clone()
 			reversedGeometry.Reverse()
 			edges = append(edges, gotopo.InsertEdgeParams{
 				Gid:      edge.gid,
@@ -63,25 +67,37 @@ func shouldSplit(road *gotopo.GetRoadsRow) bool {
 func offsetGeometry(edges *[]gotopo.InsertEdgeParams, roadIndex *map[int32]*gotopo.GetRoadsRow) {
 	for i := range *edges {
 		edge := &(*edges)[i] // pointer to be able to modify the element
-		newCoords := make([]geom.Coord, len(edge.Geom.LineString(0).Coords()))
-		for coord := range edge.Geom.LineString(0).Coords() {
-			displacement := roadWidth((*roadIndex)[edge.Gid]) / 2
-			current := edge.Geom.LineString(0).Coords()[coord]
-			var displacementX float64
-			var displacementY float64
+		displacement := roadWidth((*roadIndex)[edge.Gid]) / 2
 
-			if coord < len(newCoords)-1 {
-				displacementX, displacementY = displacementVector(displacement, current, edge.Geom.LineString(0).Coords()[coord+1])
-			} else {
-				displacementX, displacementY = displacementVector(displacement, edge.Geom.LineString(0).Coords()[coord-1], current)
-			}
+		// Coords() returns a deep copy of all linestrings (each point has the full stride, e.g. X, Y, Z)
+		lines := edge.Geom.Coords()
+		newLines := make([][]geom.Coord, len(lines))
+		for l, line := range lines {
+			newLine := make([]geom.Coord, len(line))
+			for c, current := range line {
+				// copy the coordinate to keep every dimension (Z, M) so the stride matches the layout
+				newCoord := make(geom.Coord, len(current))
+				copy(newCoord, current)
 
-			newCoords[coord] = geom.Coord{
-				current.X() + displacementX,
-				current.Y() + displacementY,
+				if len(line) > 1 {
+					var displacementX, displacementY float64
+					if c < len(line)-1 {
+						displacementX, displacementY = displacementVector(displacement, current, line[c+1])
+					} else {
+						displacementX, displacementY = displacementVector(displacement, line[c-1], current)
+					}
+					newCoord[0] += displacementX
+					newCoord[1] += displacementY
+				}
+				newLine[c] = newCoord
 			}
+			newLines[l] = newLine
 		}
-		edge.Geom.LineString(0).MustSetCoords(newCoords)
+
+		// set coordinates on the whole MultiLineString (LineString(i) only returns a temporary copy)
+		if _, err := edge.Geom.SetCoords(newLines); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -89,6 +105,9 @@ func displacementVector(displacement float64, start geom.Coord, end geom.Coord) 
 	dx := end.X() - start.X()
 	dy := end.Y() - start.Y()
 	norm := math.Sqrt(dx*dx + dy*dy)
+	if norm == 0 {
+		return 0, 0
+	}
 	perpendicularX := dy / norm
 	perpendicularY := -dx / norm
 	displacementX := perpendicularX * displacement
