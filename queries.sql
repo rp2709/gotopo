@@ -19,3 +19,9 @@ VALUES ($1, $2);
 -- name: InsertEdges :copyfrom
 INSERT INTO edges (gid, start_vid, end_vid)
 VALUES ($1, $2, $3);
+
+-- name: DeleteAllEdges :exec
+DELETE FROM edges;
+
+-- name: DeleteAllVertices :exec
+DELETE FROM vertices;

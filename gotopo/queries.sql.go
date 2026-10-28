@@ -12,6 +12,24 @@ import (
 	geom "github.com/twpayne/go-geom"
 )
 
+const deleteAllEdges = `-- name: DeleteAllEdges :exec
+DELETE FROM edges
+`
+
+func (q *Queries) DeleteAllEdges(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteAllEdges)
+	return err
+}
+
+const deleteAllVertices = `-- name: DeleteAllVertices :exec
+DELETE FROM vertices
+`
+
+func (q *Queries) DeleteAllVertices(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteAllVertices)
+	return err
+}
+
 const getRoads = `-- name: GetRoads :many
 SELECT
     gid,

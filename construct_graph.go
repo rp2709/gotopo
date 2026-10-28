@@ -1,17 +1,27 @@
 package main
 
 import (
+	"context"
+	"gotopo/gotopo"
 	"gotopo/quadtree"
 	"gotopo/queue"
+	"log"
 	"math"
 )
 
 const none int32 = -1
 
-func ConstructGraph(roadPoints *[]RoadPoint, startingLocation quadtree.Point, epsilon float64) *Graph {
+/** ConstructGraph reads roads from database and constructs graph
+ * conceptually, it starts at a given location and treats points in cluster
+ * a cluster is a set of points that are within epsilon distance of each other
+ */
+func ConstructGraph(queries *gotopo.Queries, ctx context.Context, startingLocation quadtree.Point, epsilon float64) *Graph {
+	roadPoints, srid := getRoadPointsAndSrid(queries, ctx)
+
 	graph := Graph{
 		Vertices: make([]Vertex, 0),
 		Edges:    make([]Edge, 0),
+		Srid:     srid,
 	}
 
 	var nextVertexId int32 = 0
@@ -74,6 +84,7 @@ func ConstructGraph(roadPoints *[]RoadPoint, startingLocation quadtree.Point, ep
 }
 
 type Graph struct {
+	Srid     int
 	Vertices []Vertex
 	Edges    []Edge
 }
@@ -104,13 +115,54 @@ func getRoadIndex(roadPoints *[]RoadPoint) (*quadtree.QuadTree[*RoadPoint], *qua
 		maxY = max(maxY, roadPoint.Point.Y)
 	}
 
-	roadindex := quadtree.NewQuadTree[*RoadPoint](20, minX, maxX, minY, maxY)
+	roadIndex := quadtree.NewQuadTree[*RoadPoint](20, minX, maxX, minY, maxY)
 
 	for _, roadPoint := range *roadPoints {
-		roadindex.Insert(&roadPoint)
+		roadIndex.Insert(&roadPoint)
 	}
 
-	exploredindex := quadtree.NewQuadTree[*RoadPoint](20, minX, maxX, minY, maxY)
+	exploredIndex := quadtree.NewQuadTree[*RoadPoint](20, minX, maxX, minY, maxY)
 
-	return roadindex, exploredindex
+	return roadIndex, exploredIndex
+}
+
+type RoadPoint struct {
+	Start bool
+	Other *RoadPoint
+	Point quadtree.Point
+	Gid   int32 //id of the original swisstlm3d strasse
+}
+
+func (r RoadPoint) Coordinates() quadtree.Point {
+	return r.Point
+}
+
+func getRoadPointsAndSrid(queries *gotopo.Queries, ctx context.Context) (*[]RoadPoint, int) {
+	roads, err := queries.GetRoads(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	roadPoints := make([]RoadPoint, 0, 2*len(roads)) // important to pre-allocate so pointers are stable (for indexing)
+	for _, road := range roads {
+		coords := road.Geom.LineString(0).Coords()
+		start := coords[0]
+		end := coords[len(coords)-1]
+
+		roadPoints = append(roadPoints,
+			RoadPoint{
+				Point: quadtree.Point{X: start.X(), Y: start.Y()},
+				Gid:   road.Gid.Int32,
+				Start: true,
+			},
+			RoadPoint{
+				Point: quadtree.Point{X: end.X(), Y: end.Y()},
+				Gid:   road.Gid.Int32,
+				Start: false,
+			})
+
+		// link the two ends of the segment
+		roadPoints[len(roadPoints)-1].Other = &roadPoints[len(roadPoints)-2]
+		roadPoints[len(roadPoints)-2].Other = &roadPoints[len(roadPoints)-1]
+	}
+	return &roadPoints, roads[0].Geom.SRID()
 }
