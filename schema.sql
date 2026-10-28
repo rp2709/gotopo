@@ -48,7 +48,7 @@ CREATE TABLE edges
     gid       INTEGER NOT NULL,
     start_vid INTEGER NOT NULL REFERENCES vertices (vid),
     end_vid   INTEGER NOT NULL REFERENCES vertices (vid),
-    geom      geometry(MultiLineString,2056)
+    geom      geometry(LineString,2056)
 
     CHECK (start_vid <> end_vid),
     PRIMARY KEY (gid,start_vid,end_vid)

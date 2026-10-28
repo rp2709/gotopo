@@ -9,14 +9,7 @@ sql:
         out: "gotopo"
         sql_package: "pgx/v5"
         overrides:
-          - db_type: "geometry"
-            go_type:
-              import: "github.com/twpayne/go-geom"
-              package: "geom"
-              type: "MultiLineString"
-
-          - db_type: "geometry"
-            nullable: true
+          - column: "swisstlm3d_strassen_strasse.geom"
             go_type:
               import: "github.com/twpayne/go-geom"
               package: "geom"
@@ -27,3 +20,9 @@ sql:
               import: "github.com/twpayne/go-geom"
               package: "geom"
               type: "Point"
+
+          - column: "edges.geom"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "LineString"

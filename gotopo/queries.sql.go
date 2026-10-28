@@ -71,7 +71,7 @@ type InsertEdgeParams struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
-	Geom     geom.MultiLineString
+	Geom     geom.LineString
 }
 
 func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
