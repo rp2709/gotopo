@@ -62,7 +62,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 }
 
 func shouldSplit(road *gotopo.GetRoadsRow) bool {
-	return true
+	return false
 }
 
 // offsetLine : build a new line (one fresh flat buffer) from source, optionally reversed, with each point
@@ -81,7 +81,7 @@ func offsetLine(source *geom.LineString, srid int, displacement float64, reverse
 	}
 
 	dst := make([]float64, n*stride)
-	for k := 0; k < n; k++ {
+	for k := range n {
 		current := sourceOffset(k)
 		out := k * stride
 		// keep every dimension (Z, M) so the stride matches the layout
@@ -100,7 +100,7 @@ func offsetLine(source *geom.LineString, srid int, displacement float64, reverse
 		}
 	}
 
-	return *geom.NewLineStringFlat(source.Layout(), dst).SetSRID(srid)
+	return *geom.NewLineStringFlat(geom.XY, dst).SetSRID(srid)
 }
 
 func displacementVector(displacement float64, start geom.Coord, end geom.Coord) (float64, float64) {

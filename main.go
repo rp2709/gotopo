@@ -29,7 +29,7 @@ func main() {
 
 	queries := gotopo.New(conn)
 
-	// load all roads exactly once
+	slog.Info("Loading all roads")
 	roadsBuffer, grErr := queries.GetRoads(ctx)
 	if grErr != nil {
 		log.Fatal(grErr)

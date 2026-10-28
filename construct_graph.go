@@ -47,7 +47,7 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 		location := cluster[0].Point
 		vertex := gotopo.Vertex{
 			Vid:      nextVertexId,
-			Location: *geom.NewPointFlat(geom.XY, []float64{location.X, location.Y}).SetSRID(cluster[0].Road.Geom.SRID()),
+			Location: *geom.NewPoint(geom.XY).SetSRID(cluster[0].Road.Geom.SRID()).MustSetCoords(geom.Coord{location.X, location.Y}),
 		}
 		nextVertexId++
 		graph.Vertices = append(graph.Vertices, vertex)
@@ -71,6 +71,10 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 				delete(incompleteEdges, gid)
 				if edge.StartVid == none || edge.EndVid == none {
 					panic("Incomplete edge marked as complete")
+				}
+				if edge.EndVid == edge.StartVid {
+					slog.Warn("Skipping edge that forms a closed loop at vertex :", edge.StartVid)
+					continue
 				}
 				graph.Edges = append(graph.Edges, edge)
 			} else {
@@ -141,22 +145,15 @@ func getRoadPoints(roads []gotopo.GetRoadsRow) []RoadPoint {
 			continue
 		}
 		line := road.Geom.LineString(0)
-		flat := line.FlatCoords()
-		stride := line.Stride()
-		if len(flat) < stride || stride < 2 {
-			slog.Warn("Skipping road with empty line string", "gid", road.Gid.Int32)
-			continue
-		}
-		last := len(flat) - stride
-
+		coords := line.Coords()
 		roadPoints = append(roadPoints,
 			RoadPoint{
-				Point: quadtree.Point{X: flat[0], Y: flat[1]},
+				Point: quadtree.Point{X: coords[0].X(), Y: coords[0].Y()},
 				Road:  road,
 				Start: true,
 			},
 			RoadPoint{
-				Point: quadtree.Point{X: flat[last], Y: flat[last+1]},
+				Point: quadtree.Point{X: coords[len(coords)-1].X(), Y: coords[len(coords)-1].Y()},
 				Road:  road,
 				Start: false,
 			})
