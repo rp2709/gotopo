@@ -1,4 +1,4 @@
-package main
+package graph_construction
 
 import (
 	"gotopo/gotopo"
@@ -73,7 +73,7 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 					panic("Incomplete edge marked as complete")
 				}
 				if edge.EndVid == edge.StartVid {
-					slog.Warn("Skipping edge that forms a closed loop at vertex :", edge.StartVid)
+					slog.Warn("Skipping edge that forms a closed loop", "vertex_id", edge.StartVid)
 					continue
 				}
 				graph.Edges = append(graph.Edges, edge)

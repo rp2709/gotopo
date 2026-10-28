@@ -1,8 +1,9 @@
-package main
+package graph_construction
 
 import (
 	"context"
 	"gotopo/gotopo"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -18,6 +19,7 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 	}
 	defer tx.Rollback(ctx) // no-op once committed
 
+	slog.Debug("Deleting existing graph")
 	queries := gotopo.New(tx)
 	err = queries.DeleteAllEdges(ctx)
 	if err != nil {
@@ -28,6 +30,7 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 		return err
 	}
 
+	slog.Debug("Adding vertices")
 	if graph.Vertices != nil {
 		_, err = tx.CopyFrom(ctx,
 			pgx.Identifier{"vertices"},
@@ -42,6 +45,7 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 		}
 	}
 
+	slog.Debug("Adding edges")
 	if graph.Edges != nil {
 		_, err = tx.CopyFrom(ctx,
 			pgx.Identifier{"edges"},

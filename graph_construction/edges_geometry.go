@@ -1,4 +1,4 @@
-package main
+package graph_construction
 
 import (
 	"gotopo/gotopo"
