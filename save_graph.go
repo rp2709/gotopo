@@ -12,7 +12,7 @@ import (
 // SaveGraph stores the vertices and edges of the graph in the vertices and edges tables.
 // Everything is done in a single transaction, vertices first so the edge foreign keys are satisfied.
 // Edges that are incomplete (a missing end) or that are loops (start == end) are skipped.
-func SaveGraph(ctx context.Context, conn *pgx.Conn, graph *Graph, srid int) error {
+func SaveGraph(ctx context.Context, conn *pgx.Conn, vertices *[]gotopo.InsertVertexParams, edges *[]gotopo.InsertEdgeParams, srid int) error {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return err
@@ -43,17 +43,6 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph *Graph, srid int) erro
 		return err
 	}
 
-	edges := make([]gotopo.InsertEdgesParams, 0, len(graph.Edges))
-	for _, e := range graph.Edges {
-		if e.start == none || e.end == none || e.start == e.end {
-			continue
-		}
-		edges = append(edges, gotopo.InsertEdgesParams{
-			Gid:      e.gid,
-			StartVid: e.start,
-			EndVid:   e.end,
-		})
-	}
 	ne, err := queries.InsertEdges(ctx, edges)
 	if err != nil {
 		return err

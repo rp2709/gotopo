@@ -13,6 +13,7 @@ type Edge struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
+	Geom     geom.MultiLineString
 }
 
 type Swisstlm3dStrassenStrasse struct {

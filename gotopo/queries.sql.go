@@ -63,18 +63,24 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 }
 
 const insertEdge = `-- name: InsertEdge :exec
-INSERT INTO edges (gid, start_vid, end_vid)
-VALUES ($1, $2, $3)
+INSERT INTO edges (gid, start_vid, end_vid, geom)
+VALUES ($1, $2, $3, $4)
 `
 
 type InsertEdgeParams struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
+	Geom     geom.MultiLineString
 }
 
 func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
-	_, err := q.db.Exec(ctx, insertEdge, arg.Gid, arg.StartVid, arg.EndVid)
+	_, err := q.db.Exec(ctx, insertEdge,
+		arg.Gid,
+		arg.StartVid,
+		arg.EndVid,
+		arg.Geom,
+	)
 	return err
 }
 
@@ -82,6 +88,7 @@ type InsertEdgesParams struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
+	Geom     geom.MultiLineString
 }
 
 const insertVertex = `-- name: InsertVertex :exec

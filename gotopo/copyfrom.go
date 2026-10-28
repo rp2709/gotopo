@@ -32,6 +32,7 @@ func (r iteratorForInsertEdges) Values() ([]interface{}, error) {
 		r.rows[0].Gid,
 		r.rows[0].StartVid,
 		r.rows[0].EndVid,
+		r.rows[0].Geom,
 	}, nil
 }
 
@@ -40,7 +41,7 @@ func (r iteratorForInsertEdges) Err() error {
 }
 
 func (q *Queries) InsertEdges(ctx context.Context, arg []InsertEdgesParams) (int64, error) {
-	return q.db.CopyFrom(ctx, []string{"edges"}, []string{"gid", "start_vid", "end_vid"}, &iteratorForInsertEdges{rows: arg})
+	return q.db.CopyFrom(ctx, []string{"edges"}, []string{"gid", "start_vid", "end_vid", "geom"}, &iteratorForInsertEdges{rows: arg})
 }
 
 // iteratorForInsertVertices implements pgx.CopyFromSource.

@@ -29,7 +29,7 @@ func main() {
 
 	graph := ConstructGraph(queries, ctx, quadtree.Point{X: 2540215.68, Y: 1181115.23}, 0.5)
 
-	if err := SaveGraph(ctx, conn, graph, 2056); err != nil {
-		log.Fatal(err)
-	}
+	locatedEdges := DoubleEdges(&graph.Edges, ctx, queries)
+
+	SaveGraph(ctx, conn, nil, locatedEdges, graph.Srid)
 }
