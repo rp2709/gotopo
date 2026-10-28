@@ -49,7 +49,7 @@ func Run(config GraphConstructionConfig) error {
 	}
 
 	slog.Info("Constructing graph")
-	graph := ConstructGraph(roadsBuffer, quadtree.Point{X: 2540215.68, Y: 1181115.23}, 0.5)
+	graph := ConstructGraph(roadsBuffer, quadtree.Point{X: config.StartX, Y: config.StartY}, 0.5, config.ExplorationLimit)
 	slog.Debug("Graph created with", "n", len(graph.Vertices), "m", len(graph.Edges))
 
 	slog.Info("Separating and locating edges")

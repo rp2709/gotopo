@@ -16,7 +16,7 @@ const none int32 = -1
  * conceptually, it starts at a given location and treats points in cluster
  * a cluster is a set of points that are within epsilon distance of each other
  */
-func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point, epsilon float64) Graph {
+func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point, epsilon float64, explorationLimit int64) Graph {
 	roadPoints := getRoadPoints(roads)
 
 	graph := Graph{
@@ -41,7 +41,9 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 	opened.Push(startRoadPoint)
 	exploredIndex.Insert(startRoadPoint)
 
-	for opened.Len() > 0 { // while there are opened ends
+	var iterations int64 = 0
+	for opened.Len() > 0 && iterations < explorationLimit { // while there are opened ends and we haven't reached the limit
+		iterations++
 		// get cluster that may be considered as a single vertex
 		cluster := roadPointsIndex.GetWithin(epsilon, opened.Pop().Point)
 		location := cluster[0].Point
