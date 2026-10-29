@@ -2,8 +2,9 @@ package graph_construction
 
 import (
 	"context"
-	"gotopo/gotopo"
 	"log/slog"
+
+	"github.com/rp2709/gotopo/gotopo"
 
 	"github.com/jackc/pgx/v5"
 )

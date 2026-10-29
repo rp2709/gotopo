@@ -1,11 +1,12 @@
 package graph_construction
 
 import (
-	"gotopo/gotopo"
-	"gotopo/quadtree"
-	"gotopo/queue"
 	"log/slog"
 	"math"
+
+	"github.com/rp2709/gotopo/gotopo"
+	"github.com/rp2709/gotopo/quadtree"
+	"github.com/rp2709/gotopo/queue"
 
 	"github.com/twpayne/go-geom"
 )

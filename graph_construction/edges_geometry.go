@@ -1,9 +1,10 @@
 package graph_construction
 
 import (
-	"gotopo/gotopo"
 	"log/slog"
 	"math"
+
+	"github.com/rp2709/gotopo/gotopo"
 
 	"github.com/twpayne/go-geom"
 )

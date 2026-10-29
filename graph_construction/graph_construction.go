@@ -3,10 +3,11 @@ package graph_construction
 import (
 	"context"
 	"fmt"
-	"gotopo/gotopo"
-	"gotopo/quadtree"
 	"log"
 	"log/slog"
+
+	"github.com/rp2709/gotopo/gotopo"
+	"github.com/rp2709/gotopo/quadtree"
 
 	"github.com/jackc/pgx/v5"
 	pgxgeom "github.com/twpayne/pgx-geom"

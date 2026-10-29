@@ -3,10 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"gotopo/graph_construction"
 	"log/slog"
 	"math"
 	"os"
+
+	"github.com/rp2709/gotopo/graph_construction"
 )
 
 type Command int
