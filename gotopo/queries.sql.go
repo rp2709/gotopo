@@ -39,6 +39,7 @@ SELECT
     kreisel AS roundabout,
     shape
 FROM tlm_strasse
+WHERE objektart NOT IN (0,1,2,3,6,13,14,21,22)
 `
 
 type GetRoadsRow struct {
@@ -100,6 +101,7 @@ func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
 }
 
 const insertVertex = `-- name: InsertVertex :exec
+
 INSERT INTO vertices (vid, location)
 VALUES ($1, $2)
 `
@@ -109,6 +111,7 @@ type InsertVertexParams struct {
 	Location geom.Point
 }
 
+// see swisstlm3d object catalog
 func (q *Queries) InsertVertex(ctx context.Context, arg InsertVertexParams) error {
 	_, err := q.db.Exec(ctx, insertVertex, arg.Vid, arg.Location)
 	return err

@@ -6,7 +6,8 @@ SELECT
     richtungsgetrennt AS direction_restriction,
     kreisel AS roundabout,
     shape
-FROM tlm_strasse;
+FROM tlm_strasse
+WHERE objektart NOT IN (0,1,2,3,6,13,14,21,22); -- see swisstlm3d object catalog
 
 -- name: InsertVertex :exec
 INSERT INTO vertices (vid, location)
