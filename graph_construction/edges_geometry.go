@@ -12,6 +12,20 @@ import (
 
 // applies a series of transformations to the edges of a graph to get directional location of edges
 
+var roadWidth = map[schema.ObjectType]float64{
+	schema.OBJECT_TYPE_CHEMIN_1M:                   1.0,
+	schema.OBJECT_TYPE_CHEMIN_2M:                   2.0,
+	schema.OBJECT_TYPE_ROUTE_3M:                    3.0,
+	schema.OBJECT_TYPE_ROUTE_4M:                    4.0,
+	schema.OBJECT_TYPE_ROUTE_6M:                    6.0,
+	schema.OBJECT_TYPE_ROUTE_8M:                    8.0,
+	schema.OBJECT_TYPE_ROUTE_10M:                   10.0,
+	schema.OBJECT_TYPE_MOBILITE_DOUCE_NON_ATTRIBUE: 2.0,
+	schema.OBJECT_TYPE_MARQUE_TRACEE:               0.0,
+}
+
+const default_width float64 = 0.0 // keep roads we don't know/care about in place
+
 // DoubleEdges : double each edge (with exceptions) and associate its offset geometry
 func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo.Edge {
 	// construct index of roads by gid (pointers into the shared slice, no copies)
@@ -67,7 +81,7 @@ func shouldSplit(road *gotopo.GetRoadsRow) bool {
 func offsetGeometry(edges *[]gotopo.Edge, roadIndex *map[int32]*gotopo.GetRoadsRow) {
 	for i := range *edges {
 		edge := &(*edges)[i] // pointer to be able to modify the element
-		displacement := roadWidth((*roadIndex)[edge.Gid]) / 2
+		displacement := getRoadWidth((*roadIndex)[edge.Gid]) / 2
 
 		line := edge.Shape.Coords()
 		newLine := make([]geom.Coord, len(line))
@@ -107,6 +121,10 @@ func displacementVector(displacement float64, start geom.Coord, end geom.Coord) 
 	return displacementX, displacementY
 }
 
-func roadWidth(road *gotopo.GetRoadsRow) float64 {
-	return 6.0
+func getRoadWidth(road *gotopo.GetRoadsRow) float64 {
+	width, ok := roadWidth[road.ObjectType]
+	if !ok {
+		return default_width
+	}
+	return width
 }
