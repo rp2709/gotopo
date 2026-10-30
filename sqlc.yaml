@@ -26,3 +26,27 @@ sql:
               import: "github.com/twpayne/go-geom"
               package: "geom"
               type: "LineString"
+
+          - column: "tlm_strasse.objektart"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "ObjectType"
+
+          - column: "tlm_strasse.verkehrsbeschraenkung"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "TraficRestriction"
+
+          - column: "tlm_strasse.richtungsgetrennt"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "TlmBool"
+
+          - column: "tlm_strasse.kreisel"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "TlmBool"

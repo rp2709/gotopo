@@ -1,6 +1,10 @@
 -- name: GetRoads :many
 SELECT
     objectid AS gid,
+    objektart AS object_type,
+    verkehrsbeschraenkung AS trafic_restriction,
+    richtungsgetrennt AS direction_restriction,
+    kreisel AS roundabout,
     shape
 FROM tlm_strasse;
 

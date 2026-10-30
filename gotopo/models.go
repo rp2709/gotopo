@@ -6,6 +6,7 @@ package gotopo
 
 import (
 	"github.com/jackc/pgx/v5/pgtype"
+	schema "github.com/rp2709/gotopo/schema"
 	geom "github.com/twpayne/go-geom"
 )
 
@@ -621,16 +622,16 @@ type TlmStrasse struct {
 	HerkunftJahr          pgtype.Int4
 	HerkunftMonat         pgtype.Int4
 	RevisionQualitaet     pgtype.Text
-	Objektart             pgtype.Int4
+	Objektart             schema.ObjectType
 	Kunstbaute            pgtype.Int4
 	Wanderwege            pgtype.Int4
-	Verkehrsbeschraenkung pgtype.Int4
+	Verkehrsbeschraenkung schema.TraficRestriction
 	Befahrbarkeit         pgtype.Int4
 	Eroeffnungsdatum      pgtype.Timestamptz
 	Stufe                 pgtype.Int4
-	Richtungsgetrennt     pgtype.Int4
+	Richtungsgetrennt     schema.TlmBool
 	Belagsart             pgtype.Int4
-	Kreisel               pgtype.Int4
+	Kreisel               schema.TlmBool
 	Eigentuemer           pgtype.Int4
 	Verkehrsbedeutung     pgtype.Int4
 	Name                  pgtype.Text

@@ -8,6 +8,7 @@ package gotopo
 import (
 	"context"
 
+	schema "github.com/rp2709/gotopo/schema"
 	geom "github.com/twpayne/go-geom"
 )
 
@@ -32,13 +33,21 @@ func (q *Queries) DeleteAllVertices(ctx context.Context) error {
 const getRoads = `-- name: GetRoads :many
 SELECT
     objectid AS gid,
+    objektart AS object_type,
+    verkehrsbeschraenkung AS trafic_restriction,
+    richtungsgetrennt AS direction_restriction,
+    kreisel AS roundabout,
     shape
 FROM tlm_strasse
 `
 
 type GetRoadsRow struct {
-	Gid   int32
-	Shape geom.MultiLineString
+	Gid                  int32
+	ObjectType           schema.ObjectType
+	TraficRestriction    schema.TraficRestriction
+	DirectionRestriction schema.TlmBool
+	Roundabout           schema.TlmBool
+	Shape                geom.MultiLineString
 }
 
 func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
@@ -50,7 +59,14 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 	var items []GetRoadsRow
 	for rows.Next() {
 		var i GetRoadsRow
-		if err := rows.Scan(&i.Gid, &i.Shape); err != nil {
+		if err := rows.Scan(
+			&i.Gid,
+			&i.ObjectType,
+			&i.TraficRestriction,
+			&i.DirectionRestriction,
+			&i.Roundabout,
+			&i.Shape,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
