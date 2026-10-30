@@ -2,14 +2,14 @@ version: "2"
 sql:
   - engine: "postgresql"
     queries: "queries.sql"
-    schema: "schema.sql"
+    schema: "schema"
     gen:
       go:
         package: "gotopo"
         out: "gotopo"
         sql_package: "pgx/v5"
         overrides:
-          - column: "swisstlm3d_strassen_strasse.geom"
+          - column: "tlm_strasse.shape"
             go_type:
               import: "github.com/twpayne/go-geom"
               package: "geom"
@@ -21,7 +21,7 @@ sql:
               package: "geom"
               type: "Point"
 
-          - column: "edges.geom"
+          - column: "edges.shape"
             go_type:
               import: "github.com/twpayne/go-geom"
               package: "geom"

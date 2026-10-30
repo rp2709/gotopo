@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/rp2709/gotopo/gotopo"
+	"github.com/rp2709/gotopo/schema"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -19,6 +20,11 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 		return err
 	}
 	defer tx.Rollback(ctx) // no-op once committed
+
+	slog.Debug("Writing schema")
+	if _, err = conn.Exec(ctx, schema.GraphSchema()); err != nil {
+		return err
+	}
 
 	slog.Debug("Deleting existing graph")
 	queries := gotopo.New(tx)
@@ -50,10 +56,10 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 	if graph.Edges != nil {
 		_, err = tx.CopyFrom(ctx,
 			pgx.Identifier{"edges"},
-			[]string{"gid", "start_vid", "end_vid", "geom"},
+			[]string{"gid", "start_vid", "end_vid", "shape"},
 			pgx.CopyFromSlice(len(graph.Edges), func(i int) ([]any, error) {
 				edge := graph.Edges[i]
-				return []any{edge.Gid, edge.StartVid, edge.EndVid, &edge.Geom}, nil
+				return []any{edge.Gid, edge.StartVid, edge.EndVid, &edge.Shape}, nil
 			}),
 		)
 		if err != nil {

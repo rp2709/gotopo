@@ -8,7 +8,6 @@ package gotopo
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	geom "github.com/twpayne/go-geom"
 )
 
@@ -32,14 +31,14 @@ func (q *Queries) DeleteAllVertices(ctx context.Context) error {
 
 const getRoads = `-- name: GetRoads :many
 SELECT
-    gid,
-    geom
-FROM swisstlm3d_strassen_strasse
+    objectid AS gid,
+    shape
+FROM tlm_strasse
 `
 
 type GetRoadsRow struct {
-	Gid  pgtype.Int4
-	Geom geom.MultiLineString
+	Gid   int32
+	Shape geom.MultiLineString
 }
 
 func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
@@ -51,7 +50,7 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 	var items []GetRoadsRow
 	for rows.Next() {
 		var i GetRoadsRow
-		if err := rows.Scan(&i.Gid, &i.Geom); err != nil {
+		if err := rows.Scan(&i.Gid, &i.Shape); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -63,7 +62,7 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 }
 
 const insertEdge = `-- name: InsertEdge :exec
-INSERT INTO edges (gid, start_vid, end_vid, geom)
+INSERT INTO edges (gid, start_vid, end_vid, shape)
 VALUES ($1, $2, $3, $4)
 `
 
@@ -71,7 +70,7 @@ type InsertEdgeParams struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
-	Geom     geom.LineString
+	Shape    geom.LineString
 }
 
 func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
@@ -79,7 +78,7 @@ func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
 		arg.Gid,
 		arg.StartVid,
 		arg.EndVid,
-		arg.Geom,
+		arg.Shape,
 	)
 	return err
 }

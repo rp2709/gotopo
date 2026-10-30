@@ -16,7 +16,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 	// construct index of roads by gid (pointers into the shared slice, no copies)
 	roadsIndex := make(map[int32]*gotopo.GetRoadsRow, len(roads))
 	for i := range roads {
-		roadsIndex[roads[i].Gid.Int32] = &roads[i]
+		roadsIndex[roads[i].Gid] = &roads[i]
 	}
 
 	// construct slice of edges
@@ -29,14 +29,14 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 			continue
 		}
 		// shares the road's flat coordinates: only read from it
-		line := correspondingRoad.Geom.LineString(0)
+		line := correspondingRoad.Shape.LineString(0)
 
 		// add in original direction
 		edges = append(edges, gotopo.Edge{
 			Gid:      edge.Gid,
 			StartVid: edge.StartVid,
 			EndVid:   edge.EndVid,
-			Geom:     *line.Clone(),
+			Shape:    *line.Clone(),
 		})
 
 		if shouldSplit(correspondingRoad) {
@@ -48,7 +48,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 				Gid:      edge.Gid,
 				StartVid: edge.EndVid,
 				EndVid:   edge.StartVid,
-				Geom:     *reversedLine,
+				Shape:    *reversedLine,
 			})
 		}
 	}
@@ -68,7 +68,7 @@ func offsetGeometry(edges *[]gotopo.Edge, roadIndex *map[int32]*gotopo.GetRoadsR
 		edge := &(*edges)[i] // pointer to be able to modify the element
 		displacement := roadWidth((*roadIndex)[edge.Gid]) / 2
 
-		line := edge.Geom.Coords()
+		line := edge.Shape.Coords()
 		newLine := make([]geom.Coord, len(line))
 		for c, current := range line {
 			// copy the coordinate to keep every dimension (Z, M) so the stride matches the layout
@@ -88,7 +88,7 @@ func offsetGeometry(edges *[]gotopo.Edge, roadIndex *map[int32]*gotopo.GetRoadsR
 			newLine[c] = newCoord
 		}
 
-		edge.Geom.MustSetCoords(newLine)
+		edge.Shape.MustSetCoords(newLine)
 	}
 }
 

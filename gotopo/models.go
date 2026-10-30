@@ -13,39 +13,848 @@ type Edge struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
-	Geom     geom.LineString
+	Shape    geom.LineString
 }
 
-type Swisstlm3dStrassenStrasse struct {
-	Gid        pgtype.Int4
-	Uuid       pgtype.Text
-	DatumAend  pgtype.Date
-	DatumErst  pgtype.Date
-	ErstellJ   pgtype.Int4
-	ErstellM   pgtype.Int4
-	RevisionJ  pgtype.Int4
-	RevisionM  pgtype.Int4
-	GrundAend  pgtype.Text
-	Herkunft   pgtype.Text
-	HerkunftJ  pgtype.Int4
-	HerkunftM  pgtype.Int4
-	Objektart  pgtype.Text
-	RevisionQ  pgtype.Text
-	Kunstbaute pgtype.Text
-	Wanderwege pgtype.Text
-	Befahrbark pgtype.Text
-	Eroeffnung pgtype.Date
-	Stufe      pgtype.Text
-	Richtungsg pgtype.Text
-	StrNameU   pgtype.Text
-	Name       pgtype.Text
-	Belagsart  pgtype.Text
-	Kreisel    pgtype.Text
-	Verkehrsbe pgtype.Text
-	Eigentueme pgtype.Text
-	Verkehrsbd pgtype.Text
-	Strname    pgtype.Text
-	Geom       geom.MultiLineString
+type TlmAusEinfahrt struct {
+	Objectid            int32
+	Uuid                pgtype.Text
+	DatumAenderung      pgtype.Timestamptz
+	DatumErstellung     pgtype.Timestamptz
+	ErstellungJahr      pgtype.Int4
+	ErstellungMonat     pgtype.Int4
+	RevisionJahr        pgtype.Int4
+	RevisionMonat       pgtype.Int4
+	GrundAenderung      pgtype.Int4
+	Herkunft            pgtype.Int4
+	HerkunftJahr        pgtype.Int4
+	HerkunftMonat       pgtype.Int4
+	RevisionQualitaet   pgtype.Text
+	Objektart           pgtype.Int4
+	Nummer              pgtype.Text
+	Name                pgtype.Text
+	TlmStrassenNameUuid pgtype.Text
+	Shape               interface{}
+}
+
+type TlmBodenbedeckung struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Shape             interface{}
+}
+
+type TlmEinzelbaum struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Shape             interface{}
+}
+
+type TlmEinzelobjekt struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmEoNameUuid     pgtype.Text
+	Shape             interface{}
+}
+
+type TlmEisenbahn struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Kunstbaute        pgtype.Int4
+	Museumsbahn       pgtype.Int4
+	AufStrasse        pgtype.Int4
+	AchseDkm          pgtype.Int4
+	Anschlussgleis    pgtype.Int4
+	Eroeffnungsdatum  pgtype.Timestamptz
+	Stufe             pgtype.Int4
+	AusserBetrieb     pgtype.Int4
+	Betriebsbahn      pgtype.Int4
+	Standseilbahn     pgtype.Int4
+	Zahnradbahn       pgtype.Int4
+	AnzahlSpuren      pgtype.Int4
+	Verkehrsmittel    pgtype.Int4
+	Name              pgtype.Text
+	TlmOevNameUuid    pgtype.Text
+	Shape             interface{}
+}
+
+type TlmFliessgewaesser struct {
+	Objectid             int32
+	ShapeLength          pgtype.Float8
+	Uuid                 pgtype.Text
+	DatumAenderung       pgtype.Timestamptz
+	DatumErstellung      pgtype.Timestamptz
+	ErstellungJahr       pgtype.Int4
+	ErstellungMonat      pgtype.Int4
+	RevisionJahr         pgtype.Int4
+	RevisionMonat        pgtype.Int4
+	GrundAenderung       pgtype.Int4
+	Herkunft             pgtype.Int4
+	HerkunftJahr         pgtype.Int4
+	HerkunftMonat        pgtype.Int4
+	RevisionQualitaet    pgtype.Text
+	Objektart            pgtype.Int4
+	GewissNr             pgtype.Int4
+	LaufNr               pgtype.Int4
+	Linst                pgtype.Text
+	GwlNr                pgtype.Text
+	Verlauf              pgtype.Int4
+	Stufe                pgtype.Int4
+	TlmGewaesserLaufUuid pgtype.Text
+	Name                 pgtype.Text
+	TlmGewaesserNameUuid pgtype.Text
+	Shape                interface{}
+}
+
+type TlmFlurname struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmNamenNameUuid  pgtype.Text
+	Shape             interface{}
+}
+
+type TlmFreizeitareal struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmArealeNameUuid pgtype.Text
+	Shape             interface{}
+}
+
+type TlmGebaeudeFootprint struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Nutzung           pgtype.Text
+	TlmBautenNameUuid pgtype.Text
+	Name              pgtype.Text
+	Shape             interface{}
+}
+
+type TlmGebietsname struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmNamenNameUuid  pgtype.Text
+	Shape             interface{}
+}
+
+type TlmGelaendename struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmNamenNameUuid  pgtype.Text
+	Shape             interface{}
+}
+
+type TlmGlamo struct {
+	Objectid              int32
+	Uuid                  pgtype.Text
+	DatumAenderung        pgtype.Timestamptz
+	DatumErstellung       pgtype.Timestamptz
+	ErstellungJahr        pgtype.Int4
+	ErstellungMonat       pgtype.Int4
+	GrundAenderung        pgtype.Int4
+	Herkunft              pgtype.Int4
+	HerkunftJahr          pgtype.Int4
+	HerkunftMonat         pgtype.Int4
+	RevisionJahr          pgtype.Int4
+	RevisionMonat         pgtype.Int4
+	RevisionQualitaet     pgtype.Text
+	TlmBodenbedeckungUuid pgtype.Text
+	Sgi                   pgtype.Text
+	Riverlevel0           pgtype.Text
+	Riverlevel1           pgtype.Int2
+	Riverlevel2           pgtype.Int2
+	Riverlevel3           pgtype.Text
+	Inventorycode         pgtype.Int2
+}
+
+type TlmHaltestelle struct {
+	Objectid            int32
+	Uuid                pgtype.Text
+	DatumAenderung      pgtype.Timestamptz
+	DatumErstellung     pgtype.Timestamptz
+	ErstellungJahr      pgtype.Int4
+	ErstellungMonat     pgtype.Int4
+	RevisionJahr        pgtype.Int4
+	RevisionMonat       pgtype.Int4
+	GrundAenderung      pgtype.Int4
+	Herkunft            pgtype.Int4
+	HerkunftJahr        pgtype.Int4
+	HerkunftMonat       pgtype.Int4
+	RevisionQualitaet   pgtype.Text
+	Objektart           pgtype.Int4
+	DienststellenNummer pgtype.Int4
+	Name                pgtype.Text
+	TlmOevNameUuid      pgtype.Text
+	Shape               interface{}
+}
+
+type TlmLeitung struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Stufe             pgtype.Int4
+	Netzebene         pgtype.Int4
+	Name              pgtype.Text
+	TlmBautenNameUuid pgtype.Text
+	Shape             interface{}
+}
+
+type TlmLeitungStromtrasse struct {
+	Rid                int32
+	TlmStromtrasseUuid pgtype.Text
+	TlmLeitungUuid     pgtype.Text
+}
+
+type TlmMauer struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Shape             interface{}
+}
+
+type TlmNamePkt struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Hoehe             pgtype.Float8
+	Name              pgtype.Text
+	TlmNamenNameUuid  pgtype.Text
+	Shape             interface{}
+}
+
+type TlmNutzungsareal struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmArealeNameUuid pgtype.Text
+	RisID             pgtype.Text
+	Shape             interface{}
+}
+
+type TlmNutzungsarealSchule struct {
+	Rid                  int32
+	TlmNutzungsarealUuid pgtype.Text
+	TlmSchuleUuid        pgtype.Text
+}
+
+type TlmSchifffahrt struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmOevNameUuid    pgtype.Text
+	Shape             interface{}
+}
+
+type TlmSchule struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumErstellung   pgtype.Timestamptz
+	DatumAenderung    pgtype.Timestamptz
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	IscedStufe        pgtype.Int4
+	NameSchule        pgtype.Text
+}
+
+type TlmSchutzgebiet struct {
+	Objectid           int32
+	ShapeArea          pgtype.Float8
+	ShapeLength        pgtype.Float8
+	Uuid               pgtype.Text
+	DatumAenderung     pgtype.Timestamptz
+	DatumErstellung    pgtype.Timestamptz
+	ErstellungJahr     pgtype.Int4
+	ErstellungMonat    pgtype.Int4
+	RevisionJahr       pgtype.Int4
+	RevisionMonat      pgtype.Int4
+	GrundAenderung     pgtype.Int4
+	Herkunft           pgtype.Int4
+	HerkunftJahr       pgtype.Int4
+	HerkunftMonat      pgtype.Int4
+	RevisionQualitaet  pgtype.Text
+	Objektart          pgtype.Int4
+	Name               pgtype.Text
+	TlmGrenzenNameUuid pgtype.Text
+	Shape              interface{}
+}
+
+type TlmSiedlungsname struct {
+	Objectid           int32
+	ShapeArea          pgtype.Float8
+	ShapeLength        pgtype.Float8
+	Uuid               pgtype.Text
+	DatumAenderung     pgtype.Timestamptz
+	DatumErstellung    pgtype.Timestamptz
+	ErstellungJahr     pgtype.Int4
+	ErstellungMonat    pgtype.Int4
+	RevisionJahr       pgtype.Int4
+	RevisionMonat      pgtype.Int4
+	GrundAenderung     pgtype.Int4
+	Herkunft           pgtype.Int4
+	HerkunftJahr       pgtype.Int4
+	HerkunftMonat      pgtype.Int4
+	RevisionQualitaet  pgtype.Text
+	Objektart          pgtype.Int4
+	Einwohnerkategorie pgtype.Int4
+	Name               pgtype.Text
+	TlmNamenNameUuid   pgtype.Text
+	Shape              interface{}
+}
+
+type TlmSiedlungsnameZentrum struct {
+	Objectid             int32
+	Uuid                 pgtype.Text
+	DatumAenderung       pgtype.Timestamptz
+	DatumErstellung      pgtype.Timestamptz
+	ErstellungJahr       pgtype.Int4
+	ErstellungMonat      pgtype.Int4
+	GrundAenderung       pgtype.Int4
+	Herkunft             pgtype.Int4
+	HerkunftJahr         pgtype.Int4
+	HerkunftMonat        pgtype.Int4
+	RevisionJahr         pgtype.Int4
+	RevisionMonat        pgtype.Int4
+	RevisionQualitaet    pgtype.Text
+	Objektart            pgtype.Int4
+	Einwohnerkategorie   pgtype.Int4
+	Name                 pgtype.Text
+	TlmNamenNameUuid     pgtype.Text
+	TlmSiedlungsnameUuid pgtype.Text
+	Shape                interface{}
+}
+
+type TlmSportbauteLin struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmBautenNameUuid pgtype.Text
+	Shape             interface{}
+}
+
+type TlmSportbautePly struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmBautenNameUuid pgtype.Text
+	Shape             interface{}
+}
+
+type TlmStaubaute struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmBautenNameUuid pgtype.Text
+	Shape             interface{}
+}
+
+type TlmStehendesGewaesser struct {
+	Objectid             int32
+	ShapeLength          pgtype.Float8
+	Uuid                 pgtype.Text
+	DatumAenderung       pgtype.Timestamptz
+	DatumErstellung      pgtype.Timestamptz
+	ErstellungMonat      pgtype.Int4
+	ErstellungJahr       pgtype.Int4
+	RevisionJahr         pgtype.Int4
+	RevisionMonat        pgtype.Int4
+	GrundAenderung       pgtype.Int4
+	Herkunft             pgtype.Int4
+	HerkunftJahr         pgtype.Int4
+	HerkunftMonat        pgtype.Int4
+	RevisionQualitaet    pgtype.Text
+	Objektart            pgtype.Int4
+	GewissNr             pgtype.Int4
+	LaufNr               pgtype.Int4
+	Linst                pgtype.Text
+	GwlNr                pgtype.Text
+	TlmGewaesserLaufUuid pgtype.Text
+	Name                 pgtype.Text
+	TlmGewaesserNameUuid pgtype.Text
+	WasserstandWechselnd pgtype.Int4
+	Shape                interface{}
+}
+
+type TlmStrasse struct {
+	Objectid              int32
+	ShapeLength           pgtype.Float8
+	Uuid                  pgtype.Text
+	DatumAenderung        pgtype.Timestamptz
+	DatumErstellung       pgtype.Timestamptz
+	ErstellungJahr        pgtype.Int4
+	ErstellungMonat       pgtype.Int4
+	RevisionJahr          pgtype.Int4
+	RevisionMonat         pgtype.Int4
+	GrundAenderung        pgtype.Int4
+	Herkunft              pgtype.Int4
+	HerkunftJahr          pgtype.Int4
+	HerkunftMonat         pgtype.Int4
+	RevisionQualitaet     pgtype.Text
+	Objektart             pgtype.Int4
+	Kunstbaute            pgtype.Int4
+	Wanderwege            pgtype.Int4
+	Verkehrsbeschraenkung pgtype.Int4
+	Befahrbarkeit         pgtype.Int4
+	Eroeffnungsdatum      pgtype.Timestamptz
+	Stufe                 pgtype.Int4
+	Richtungsgetrennt     pgtype.Int4
+	Belagsart             pgtype.Int4
+	Kreisel               pgtype.Int4
+	Eigentuemer           pgtype.Int4
+	Verkehrsbedeutung     pgtype.Int4
+	Name                  pgtype.Text
+	TlmStrassenNameUuid   pgtype.Text
+	Strassenname          pgtype.Text
+	Shape                 geom.MultiLineString
+}
+
+type TlmStrasseninfo struct {
+	Objectid            int32
+	Uuid                pgtype.Text
+	DatumAenderung      pgtype.Timestamptz
+	DatumErstellung     pgtype.Timestamptz
+	ErstellungJahr      pgtype.Int4
+	ErstellungMonat     pgtype.Int4
+	RevisionJahr        pgtype.Int4
+	RevisionMonat       pgtype.Int4
+	GrundAenderung      pgtype.Int4
+	Herkunft            pgtype.Int4
+	HerkunftJahr        pgtype.Int4
+	HerkunftMonat       pgtype.Int4
+	RevisionQualitaet   pgtype.Text
+	Objektart           pgtype.Int4
+	Tankstelle          pgtype.Int4
+	Restaurant          pgtype.Int4
+	Shop                pgtype.Int4
+	Toiletten           pgtype.Int4
+	Name                pgtype.Text
+	TlmStrassenNameUuid pgtype.Text
+	Shape               interface{}
+}
+
+type TlmStrassenname struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Name              pgtype.Text
+	Esid              pgtype.Float8
+	Kanton            pgtype.Text
+	Gdename           pgtype.Text
+	Gdenr             pgtype.Int2
+	Sprachcode        pgtype.Text
+}
+
+type TlmStrassennameStrasse struct {
+	Rid                 int32
+	TlmStrassennameUuid pgtype.Text
+	TlmStrasseUuid      pgtype.Text
+}
+
+type TlmStrassenroute struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumErstellung   pgtype.Timestamptz
+	DatumAenderung    pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	Routennummer      pgtype.Text
+}
+
+type TlmStrassenrouteStrasse struct {
+	Rid                  int32
+	TlmStrassenrouteUuid pgtype.Text
+	TlmStrasseUuid       pgtype.Text
+}
+
+type TlmStromtrasse struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Netzebene         pgtype.Int4
+}
+
+type TlmUebrigeBahn struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Betriebsbahn      pgtype.Int4
+	Stufe             pgtype.Int4
+	AusserBetrieb     pgtype.Int4
+	Eroeffnungsdatum  pgtype.Timestamptz
+	Name              pgtype.Text
+	TlmOevNameUuid    pgtype.Text
+	Shape             interface{}
+}
+
+type TlmVerbauung struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Shape             interface{}
+}
+
+type TlmVerkehrsareal struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Name              pgtype.Text
+	TlmArealeNameUuid pgtype.Text
+	Shape             interface{}
+}
+
+type TlmVerkehrsbauteLin struct {
+	Objectid          int32
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	Objektart         pgtype.Int4
+	Stufe             pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Shape             interface{}
+}
+
+type TlmVerkehrsbautePly struct {
+	Objectid          int32
+	ShapeArea         pgtype.Float8
+	ShapeLength       pgtype.Float8
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Shape             interface{}
+}
+
+type TlmVersorgungsbautePkt struct {
+	Objectid          int32
+	Uuid              pgtype.Text
+	DatumAenderung    pgtype.Timestamptz
+	DatumErstellung   pgtype.Timestamptz
+	ErstellungJahr    pgtype.Int4
+	ErstellungMonat   pgtype.Int4
+	RevisionJahr      pgtype.Int4
+	RevisionMonat     pgtype.Int4
+	GrundAenderung    pgtype.Int4
+	Herkunft          pgtype.Int4
+	HerkunftJahr      pgtype.Int4
+	HerkunftMonat     pgtype.Int4
+	RevisionQualitaet pgtype.Text
+	Objektart         pgtype.Int4
+	Shape             interface{}
 }
 
 type Vertex struct {

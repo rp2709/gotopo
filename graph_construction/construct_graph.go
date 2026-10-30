@@ -50,14 +50,14 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 		location := cluster[0].Point
 		vertex := gotopo.Vertex{
 			Vid:      nextVertexId,
-			Location: *geom.NewPoint(geom.XY).SetSRID(cluster[0].Road.Geom.SRID()).MustSetCoords(geom.Coord{location.X, location.Y}),
+			Location: *geom.NewPoint(geom.XY).SetSRID(cluster[0].Road.Shape.SRID()).MustSetCoords(geom.Coord{location.X, location.Y}),
 		}
 		nextVertexId++
 		graph.Vertices = append(graph.Vertices, vertex)
 
 		// create new edge or attach to incomplete
 		for _, point := range cluster {
-			gid := point.Road.Gid.Int32
+			gid := point.Road.Gid
 			if edge, ok := incompleteEdges[gid]; ok {
 				// attach to existing incomplete edge
 				if point.Start {
@@ -100,7 +100,7 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 
 type Graph struct {
 	Vertices []gotopo.Vertex
-	Edges    []gotopo.Edge // Geom empty until DoubleEdges
+	Edges    []gotopo.Edge // Shape empty until DoubleEdges
 }
 
 func getRoadIndex(roadPoints []RoadPoint) (*quadtree.QuadTree[*RoadPoint], *quadtree.QuadTree[*RoadPoint]) {
@@ -143,11 +143,11 @@ func getRoadPoints(roads []gotopo.GetRoadsRow) []RoadPoint {
 	roadPoints := make([]RoadPoint, 0, 2*len(roads)) // important to pre-allocate so pointers are stable
 	for i := range roads {
 		road := &roads[i]
-		if road.Geom.NumLineStrings() == 0 {
-			slog.Warn("Skipping road without geometry", "gid", road.Gid.Int32)
+		if road.Shape.NumLineStrings() == 0 {
+			slog.Warn("Skipping road without geometry", "gid", road.Gid)
 			continue
 		}
-		line := road.Geom.LineString(0)
+		line := road.Shape.LineString(0)
 		coords := line.Coords()
 		roadPoints = append(roadPoints,
 			RoadPoint{

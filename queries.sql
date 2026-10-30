@@ -1,15 +1,15 @@
 -- name: GetRoads :many
 SELECT
-    gid,
-    geom
-FROM swisstlm3d_strassen_strasse;
+    objectid AS gid,
+    shape
+FROM tlm_strasse;
 
 -- name: InsertVertex :exec
 INSERT INTO vertices (vid, location)
 VALUES ($1, $2);
 
 -- name: InsertEdge :exec
-INSERT INTO edges (gid, start_vid, end_vid, geom)
+INSERT INTO edges (gid, start_vid, end_vid, shape)
 VALUES ($1, $2, $3, $4);
 
 -- name: DeleteAllEdges :exec
