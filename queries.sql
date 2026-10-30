@@ -9,11 +9,11 @@ SELECT
 FROM tlm_strasse
 WHERE objektart NOT IN (0,1,2,3,6,13,14,21,22); -- see swisstlm3d object catalog
 
--- name: InsertVertex :exec
+-- name: InsertVertex :copyfrom
 INSERT INTO vertices (vid, location)
 VALUES ($1, $2);
 
--- name: InsertEdge :exec
+-- name: InsertEdge :copyfrom
 INSERT INTO edges (gid, start_vid, end_vid, shape)
 VALUES ($1, $2, $3, $4);
 

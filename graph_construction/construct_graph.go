@@ -21,8 +21,8 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 	roadPoints := getRoadPoints(roads)
 
 	graph := Graph{
-		Vertices: make([]gotopo.Vertex, 0),
-		Edges:    make([]gotopo.Edge, 0),
+		Vertices: make([]gotopo.InsertVertexParams, 0),
+		Edges:    make([]gotopo.InsertEdgeParams, 0),
 	}
 
 	if len(roadPoints) == 0 {
@@ -36,7 +36,7 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 	// queue fifo of RoadPoints to explore next
 	opened := queue.NewRingBuffer[*RoadPoint](50000)
 
-	incompleteEdges := make(map[int32]gotopo.Edge)
+	incompleteEdges := make(map[int32]gotopo.InsertEdgeParams)
 
 	startRoadPoint := roadPointsIndex.GetNearest(startingLocation)
 	opened.Push(startRoadPoint)
@@ -48,9 +48,9 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 		// get cluster that may be considered as a single vertex
 		cluster := roadPointsIndex.GetWithin(epsilon, opened.Pop().Point)
 		location := cluster[0].Point
-		vertex := gotopo.Vertex{
+		vertex := gotopo.InsertVertexParams{
 			Vid:      nextVertexId,
-			Location: *geom.NewPoint(geom.XY).SetSRID(cluster[0].Road.Shape.SRID()).MustSetCoords(geom.Coord{location.X, location.Y}),
+			Location: geom.NewPoint(geom.XY).SetSRID(cluster[0].Road.Shape.SRID()).MustSetCoords(geom.Coord{location.X, location.Y}),
 		}
 		nextVertexId++
 		graph.Vertices = append(graph.Vertices, vertex)
@@ -83,9 +83,9 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 			} else {
 				// create new edge
 				if point.Start {
-					incompleteEdges[gid] = gotopo.Edge{Gid: gid, StartVid: vertex.Vid, EndVid: none}
+					incompleteEdges[gid] = gotopo.InsertEdgeParams{Gid: gid, StartVid: vertex.Vid, EndVid: none}
 				} else {
-					incompleteEdges[gid] = gotopo.Edge{Gid: gid, StartVid: none, EndVid: vertex.Vid}
+					incompleteEdges[gid] = gotopo.InsertEdgeParams{Gid: gid, StartVid: none, EndVid: vertex.Vid}
 				}
 				// add other end to the queue if not equivalent to other opened point
 				if len(exploredIndex.GetWithin(epsilon, point.Other.Point)) == 0 {
@@ -99,8 +99,8 @@ func ConstructGraph(roads []gotopo.GetRoadsRow, startingLocation quadtree.Point,
 }
 
 type Graph struct {
-	Vertices []gotopo.Vertex
-	Edges    []gotopo.Edge // Shape empty until DoubleEdges
+	Vertices []gotopo.InsertVertexParams
+	Edges    []gotopo.InsertEdgeParams // Shape empty until DoubleEdges
 }
 
 func getRoadIndex(roadPoints []RoadPoint) (*quadtree.QuadTree[*RoadPoint], *quadtree.QuadTree[*RoadPoint]) {

@@ -78,41 +78,14 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 	return items, nil
 }
 
-const insertEdge = `-- name: InsertEdge :exec
-INSERT INTO edges (gid, start_vid, end_vid, shape)
-VALUES ($1, $2, $3, $4)
-`
-
 type InsertEdgeParams struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
-	Shape    geom.LineString
+	Shape    *geom.LineString
 }
-
-func (q *Queries) InsertEdge(ctx context.Context, arg InsertEdgeParams) error {
-	_, err := q.db.Exec(ctx, insertEdge,
-		arg.Gid,
-		arg.StartVid,
-		arg.EndVid,
-		arg.Shape,
-	)
-	return err
-}
-
-const insertVertex = `-- name: InsertVertex :exec
-
-INSERT INTO vertices (vid, location)
-VALUES ($1, $2)
-`
 
 type InsertVertexParams struct {
 	Vid      int32
-	Location geom.Point
-}
-
-// see swisstlm3d object catalog
-func (q *Queries) InsertVertex(ctx context.Context, arg InsertVertexParams) error {
-	_, err := q.db.Exec(ctx, insertVertex, arg.Vid, arg.Location)
-	return err
+	Location *geom.Point
 }

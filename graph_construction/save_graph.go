@@ -39,14 +39,7 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 
 	slog.Debug("Adding vertices")
 	if graph.Vertices != nil {
-		_, err = tx.CopyFrom(ctx,
-			pgx.Identifier{"vertices"},
-			[]string{"vid", "location"},
-			pgx.CopyFromSlice(len(graph.Vertices), func(i int) ([]any, error) {
-				vertex := graph.Vertices[i]
-				return []any{vertex.Vid, &vertex.Location}, nil
-			}),
-		)
+		_, err = queries.InsertVertex(ctx, graph.Vertices)
 		if err != nil {
 			return err
 		}
@@ -54,14 +47,7 @@ func SaveGraph(ctx context.Context, conn *pgx.Conn, graph Graph) error {
 
 	slog.Debug("Adding edges")
 	if graph.Edges != nil {
-		_, err = tx.CopyFrom(ctx,
-			pgx.Identifier{"edges"},
-			[]string{"gid", "start_vid", "end_vid", "shape"},
-			pgx.CopyFromSlice(len(graph.Edges), func(i int) ([]any, error) {
-				edge := graph.Edges[i]
-				return []any{edge.Gid, edge.StartVid, edge.EndVid, &edge.Shape}, nil
-			}),
-		)
+		_, err = queries.InsertEdge(ctx, graph.Edges)
 		if err != nil {
 			return err
 		}

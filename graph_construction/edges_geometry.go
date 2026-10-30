@@ -27,7 +27,7 @@ var roadWidth = map[schema.ObjectType]float64{
 const default_width float64 = 0.0 // keep roads we don't know/care about in place
 
 // DoubleEdges : double each edge (with exceptions) and associate its offset geometry
-func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo.Edge {
+func DoubleEdges(simpleEdges []gotopo.InsertEdgeParams, roads []gotopo.GetRoadsRow) []gotopo.InsertEdgeParams {
 	// construct index of roads by gid (pointers into the shared slice, no copies)
 	roadsIndex := make(map[int32]*gotopo.GetRoadsRow, len(roads))
 	for i := range roads {
@@ -35,7 +35,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 	}
 
 	// construct slice of edges
-	edges := make([]gotopo.Edge, 0, len(simpleEdges)*2) // we will potentially double the number of simple edges
+	edges := make([]gotopo.InsertEdgeParams, 0, len(simpleEdges)*2) // we will potentially double the number of simple edges
 	for i := range simpleEdges {
 		edge := &simpleEdges[i]
 		correspondingRoad, ok := roadsIndex[edge.Gid]
@@ -47,11 +47,11 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 		line := correspondingRoad.Shape.LineString(0)
 
 		// add in original direction
-		edges = append(edges, gotopo.Edge{
+		edges = append(edges, gotopo.InsertEdgeParams{
 			Gid:      edge.Gid,
 			StartVid: edge.StartVid,
 			EndVid:   edge.EndVid,
-			Shape:    *line.Clone(),
+			Shape:    line.Clone(),
 		})
 
 		if shouldSplit(correspondingRoad) {
@@ -59,11 +59,11 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 			reversedLine := line.Clone()
 			reversedLine.Reverse()
 
-			edges = append(edges, gotopo.Edge{
+			edges = append(edges, gotopo.InsertEdgeParams{
 				Gid:      edge.Gid,
 				StartVid: edge.EndVid,
 				EndVid:   edge.StartVid,
-				Shape:    *reversedLine,
+				Shape:    reversedLine,
 			})
 		}
 	}
@@ -78,7 +78,7 @@ func shouldSplit(road *gotopo.GetRoadsRow) bool {
 }
 
 // offset_geometry : offset each edge by a small amount to get directional location of edges (use gotopo/InsertEdgesParams)
-func offsetGeometry(edges *[]gotopo.Edge, roadIndex *map[int32]*gotopo.GetRoadsRow) {
+func offsetGeometry(edges *[]gotopo.InsertEdgeParams, roadIndex *map[int32]*gotopo.GetRoadsRow) {
 	for i := range *edges {
 		edge := &(*edges)[i] // pointer to be able to modify the element
 		displacement := getRoadWidth((*roadIndex)[edge.Gid]) / 2

@@ -14,7 +14,7 @@ type Edge struct {
 	Gid      int32
 	StartVid int32
 	EndVid   int32
-	Shape    geom.LineString
+	Shape    *geom.LineString
 }
 
 type TlmAusEinfahrt struct {
@@ -860,5 +860,5 @@ type TlmVersorgungsbautePkt struct {
 
 type Vertex struct {
 	Vid      int32
-	Location geom.Point
+	Location *geom.Point
 }
