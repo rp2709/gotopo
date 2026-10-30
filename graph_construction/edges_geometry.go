@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/rp2709/gotopo/gotopo"
+	"github.com/rp2709/gotopo/schema"
 
 	"github.com/twpayne/go-geom"
 )
@@ -59,7 +60,7 @@ func DoubleEdges(simpleEdges []gotopo.Edge, roads []gotopo.GetRoadsRow) []gotopo
 }
 
 func shouldSplit(road *gotopo.GetRoadsRow) bool {
-	return true
+	return road.Roundabout != schema.TlmBool_VRAI && road.DirectionRestriction != schema.TlmBool_VRAI
 }
 
 // offset_geometry : offset each edge by a small amount to get directional location of edges (use gotopo/InsertEdgesParams)
