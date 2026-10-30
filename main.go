@@ -8,24 +8,29 @@ import (
 	"os"
 
 	"github.com/rp2709/gotopo/graph_construction"
+	"github.com/rp2709/gotopo/viewsheds_generation"
 )
 
 type Command int
 
 const (
 	CommandConstructGraph Command = iota
+	CommandGenerateViewsheds
 )
 
 var CommandFromName = map[string]Command{
-	"construct-graph": CommandConstructGraph,
+	"construct-graph":    CommandConstructGraph,
+	"generate-viewsheds": CommandGenerateViewsheds,
 }
 
 var CommandToName = map[Command]string{
-	CommandConstructGraph: "construct-graph",
+	CommandConstructGraph:    "construct-graph",
+	CommandGenerateViewsheds: "generate-viewsheds",
 }
 
 var CommandDescription = map[Command]string{
-	CommandConstructGraph: "Construct complete, oriented graph from isolated road polylines",
+	CommandConstructGraph:    "Construct complete, oriented graph from isolated road polylines",
+	CommandGenerateViewsheds: "Generate a hemispherical viewshed of arbitrary precision every sample point using a digital surface model",
 }
 
 func main() {
@@ -47,6 +52,8 @@ func main() {
 	verbosity := flag.Int("verbosity", int(slog.LevelInfo), "Logging level. 0 -> info, -4 -> debug")
 	startX := flag.Float64("startingX", 2540215.68, "x coordinate of starting point for graph exploration")
 	startY := flag.Float64("startingY", 1181115.23, "y coordinate of starting point for graph exploration")
+
+	vrtFilePath := flag.String("vrt", "", "Path to .vrt file indexing the surface model's tiles")
 
 	flag.Parse()
 	logLevel := slog.Level(*verbosity)
@@ -74,6 +81,10 @@ func main() {
 			Dbname:           *dbname,
 			Dbpwd:            *dbpassword,
 			Dbport:           *dbport,
+		})
+	case CommandGenerateViewsheds:
+		err = viewsheds_generation.Run(viewsheds_generation.GenerateViewshedsConfig{
+			VrtFilePath: *vrtFilePath,
 		})
 	}
 
