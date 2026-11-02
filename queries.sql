@@ -23,3 +23,7 @@ DELETE FROM edges;
 -- name: DeleteAllVertices :exec
 DELETE FROM vertices;
 
+-- name: InsertSamplePoint :copyfrom
+INSERT INTO sample_point (eid,location)
+VALUES ($1,$2);
+

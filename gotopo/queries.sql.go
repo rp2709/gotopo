@@ -85,6 +85,11 @@ type InsertEdgeParams struct {
 	Shape    *geom.LineString
 }
 
+type InsertSamplePointParams struct {
+	Eid      int32
+	Location interface{}
+}
+
 type InsertVertexParams struct {
 	Vid      int32
 	Location *geom.Point

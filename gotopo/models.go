@@ -11,10 +11,17 @@ import (
 )
 
 type Edge struct {
+	Eid      int32
 	Gid      int32
 	StartVid int32
 	EndVid   int32
 	Shape    *geom.LineString
+}
+
+type SamplePoint struct {
+	Sid      int32
+	Eid      int32
+	Location interface{}
 }
 
 type TlmAusEinfahrt struct {

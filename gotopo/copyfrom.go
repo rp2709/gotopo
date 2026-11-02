@@ -44,6 +44,39 @@ func (q *Queries) InsertEdge(ctx context.Context, arg []InsertEdgeParams) (int64
 	return q.db.CopyFrom(ctx, []string{"edges"}, []string{"gid", "start_vid", "end_vid", "shape"}, &iteratorForInsertEdge{rows: arg})
 }
 
+// iteratorForInsertSamplePoint implements pgx.CopyFromSource.
+type iteratorForInsertSamplePoint struct {
+	rows                 []InsertSamplePointParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForInsertSamplePoint) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForInsertSamplePoint) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].Eid,
+		r.rows[0].Location,
+	}, nil
+}
+
+func (r iteratorForInsertSamplePoint) Err() error {
+	return nil
+}
+
+func (q *Queries) InsertSamplePoint(ctx context.Context, arg []InsertSamplePointParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"sample_point"}, []string{"eid", "location"}, &iteratorForInsertSamplePoint{rows: arg})
+}
+
 // iteratorForInsertVertex implements pgx.CopyFromSource.
 type iteratorForInsertVertex struct {
 	rows                 []InsertVertexParams

@@ -10,12 +10,12 @@ CREATE TABLE vertices
 
 CREATE TABLE edges
 (
-    gid       INTEGER NOT NULL,
+    eid       SERIAL PRIMARY KEY,
+    gid       INTEGER NOT NULL REFERENCES tlm_strasse (objectid),
     start_vid INTEGER NOT NULL REFERENCES vertices (vid),
     end_vid   INTEGER NOT NULL REFERENCES vertices (vid),
     shape      geometry(LineStringZ, 2056)
-        CHECK (start_vid <> end_vid),
-    PRIMARY KEY (gid, start_vid, end_vid)
+        CHECK (start_vid <> end_vid)
 );
 
 CREATE INDEX vertices_location_gix
