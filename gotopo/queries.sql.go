@@ -13,7 +13,8 @@ import (
 )
 
 const deleteAllEdges = `-- name: DeleteAllEdges :exec
-DELETE FROM edges
+DELETE
+FROM edges
 `
 
 func (q *Queries) DeleteAllEdges(ctx context.Context) error {
@@ -22,7 +23,8 @@ func (q *Queries) DeleteAllEdges(ctx context.Context) error {
 }
 
 const deleteAllVertices = `-- name: DeleteAllVertices :exec
-DELETE FROM vertices
+DELETE
+FROM vertices
 `
 
 func (q *Queries) DeleteAllVertices(ctx context.Context) error {
@@ -30,16 +32,47 @@ func (q *Queries) DeleteAllVertices(ctx context.Context) error {
 	return err
 }
 
-const getRoads = `-- name: GetRoads :many
+const getAllEdges = `-- name: GetAllEdges :many
 SELECT
-    objectid AS gid,
-    objektart AS object_type,
-    verkehrsbeschraenkung AS trafic_restriction,
-    richtungsgetrennt AS direction_restriction,
-    kreisel AS roundabout,
+    eid,
     shape
+FROM edges
+`
+
+type GetAllEdgesRow struct {
+	Eid   int32
+	Shape *geom.LineString
+}
+
+func (q *Queries) GetAllEdges(ctx context.Context) ([]GetAllEdgesRow, error) {
+	rows, err := q.db.Query(ctx, getAllEdges)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAllEdgesRow
+	for rows.Next() {
+		var i GetAllEdgesRow
+		if err := rows.Scan(&i.Eid, &i.Shape); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRoads = `-- name: GetRoads :many
+SELECT objectid              AS gid,
+       objektart             AS object_type,
+       verkehrsbeschraenkung AS trafic_restriction,
+       richtungsgetrennt     AS direction_restriction,
+       kreisel               AS roundabout,
+       shape
 FROM tlm_strasse
-WHERE objektart NOT IN (0,1,2,3,6,13,14,21,22)
+WHERE objektart NOT IN (0, 1, 2, 3, 6, 13, 14, 21, 22)
 `
 
 type GetRoadsRow struct {

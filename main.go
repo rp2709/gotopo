@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/rp2709/gotopo/graph_construction"
+	"github.com/rp2709/gotopo/sample_edges"
 	"github.com/rp2709/gotopo/viewsheds_generation"
 )
 
@@ -15,21 +16,25 @@ type Command int
 
 const (
 	CommandConstructGraph Command = iota
+	CommandSampleEdges
 	CommandGenerateViewsheds
 )
 
 var CommandFromName = map[string]Command{
 	"construct-graph":    CommandConstructGraph,
+	"sample-edges":       CommandSampleEdges,
 	"generate-viewsheds": CommandGenerateViewsheds,
 }
 
 var CommandToName = map[Command]string{
 	CommandConstructGraph:    "construct-graph",
+	CommandSampleEdges:       "sample-edges",
 	CommandGenerateViewsheds: "generate-viewsheds",
 }
 
 var CommandDescription = map[Command]string{
 	CommandConstructGraph:    "Construct complete, oriented graph from isolated road polylines",
+	CommandSampleEdges:       "Sample each edge of the graph at a fixed interval",
 	CommandGenerateViewsheds: "Generate a hemispherical viewshed of arbitrary precision every sample point using a digital surface model",
 }
 
@@ -52,6 +57,8 @@ func main() {
 	verbosity := flag.Int("verbosity", int(slog.LevelInfo), "Logging level. 0 -> info, -4 -> debug")
 	startX := flag.Float64("startingX", 2540215.68, "x coordinate of starting point for graph exploration")
 	startY := flag.Float64("startingY", 1181115.23, "y coordinate of starting point for graph exploration")
+
+	sampleInterval := flag.Float64("sample-interval", 10.0, "distance between every sample point in meters")
 
 	vrtFilePath := flag.String("vrt", "", "Path to .vrt file indexing the surface model's tiles")
 
@@ -81,6 +88,16 @@ func main() {
 			Dbname:           *dbname,
 			Dbpwd:            *dbpassword,
 			Dbport:           *dbport,
+		})
+	case CommandSampleEdges:
+		err = sample_edges.Run(sample_edges.SampleEdgesConfig{
+			LogLevel:       logLevel,
+			Dbuser:         *dbuser,
+			Dbhost:         *dbhost,
+			Dbname:         *dbname,
+			Dbpwd:          *dbpassword,
+			Dbport:         *dbport,
+			SampleInterval: *sampleInterval,
 		})
 	case CommandGenerateViewsheds:
 		err = viewsheds_generation.Run(viewsheds_generation.GenerateViewshedsConfig{
