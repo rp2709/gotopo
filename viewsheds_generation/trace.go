@@ -7,17 +7,14 @@ import (
 	"github.com/twpayne/go-geom"
 )
 
-type StepDistance func(step int) float64
-
-func obstructed(ds *vrt_reader.RasterDataset, source geom.Point, direction vector3, maxDistance float64, maxAltitude float64, horizontalStepDistance float64) bool {
+func obstructed(ds *vrt_reader.RasterDataset, source geom.Point, direction vector3, maxDistance float64, maxAltitude float64, nextDistance func(float64) float64) bool {
 	sourceAltitude := float64(ds.ValueAt(source.X(), source.Y()))
 	horizontalDirectionLength := math.Sqrt(direction.x*direction.x + direction.y*direction.y)
 	if horizontalDirectionLength == 0 {
 		return false
 	}
 
-	// distance = s.x + d.x * dad
-	for distance := horizontalStepDistance; distance < maxDistance; distance += horizontalStepDistance {
+	for distance := 0.5; distance < maxDistance; distance = nextDistance(distance) {
 		distanceAlongDirection := distance / horizontalDirectionLength
 		stepAltitude := sourceAltitude + direction.z*distanceAlongDirection
 		if stepAltitude > maxAltitude {

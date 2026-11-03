@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/vrt_reader"
+	"github.com/twpayne/go-geom"
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
@@ -53,7 +54,7 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
-	const limit = 2000
+	const limit = 5000
 	slog.Info("Loading sample points from db", "limit", limit)
 	samplePoints, err := queries.GetSomeSamplePoints(ctx, limit)
 	if err != nil {
@@ -63,17 +64,21 @@ func Run(config GenerateViewshedsConfig) error {
 	slog.Info("Start computing hemispherical viewsheds")
 	ti := time.Now()
 	for _, point := range samplePoints {
-		viewshed := make([]bool, len(directions))
-		for i, d := range directions {
-			viewshed[i] = obstructed(ds, *point.Location, d, 5000, 4500, 2)
-		}
-
+		_ = viewshed(ds, *point.Location, directions)
 	}
 	tf := time.Now()
 	duration := tf.Sub(ti)
-	println(duration.String())
+	slog.Info("Finished computing hemispherical viewsheds", "duration", duration.String())
 
 	return nil
+}
+
+func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vector3) []bool {
+	v := make([]bool, len(directions))
+	for i, d := range directions {
+		v[i] = obstructed(ds, point, d, 40000, 4500, NextDistance)
+	}
+	return v
 }
 
 type GenerateViewshedsConfig struct {
@@ -85,4 +90,8 @@ type GenerateViewshedsConfig struct {
 	Dbport   int
 
 	VrtFilePath string
+}
+
+func NextDistance(x float64) float64 {
+	return 1.08*x + 1.5
 }
