@@ -17,5 +17,45 @@
         <option name="profileType" value="ALLOCS" />
       </GoProfileMapEntry>
     </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/generate-viewsheds-heap_with_gc-2026-11-03-120128-512.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793703685627" />
+        <option name="file" value="generate-viewsheds-heap_with_gc-2026-11-03-120128-512.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="HEAP_GC" />
+      </GoProfileMapEntry>
+    </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/generate-viewsheds-cpu-2026-11-03-120317-433.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793703786966" />
+        <option name="file" value="generate-viewsheds-cpu-2026-11-03-120317-433.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="CPU" />
+      </GoProfileMapEntry>
+    </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/generate-viewsheds-cpu-2026-11-03-121103-142.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793704254619" />
+        <option name="file" value="generate-viewsheds-cpu-2026-11-03-121103-142.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="CPU" />
+      </GoProfileMapEntry>
+    </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/generate-viewsheds-cpu-2026-11-03-123540-359.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793705723346" />
+        <option name="file" value="generate-viewsheds-cpu-2026-11-03-123540-359.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="CPU" />
+      </GoProfileMapEntry>
+    </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/generate-viewsheds-cpu-2026-11-03-123722-746.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793705826795" />
+        <option name="file" value="generate-viewsheds-cpu-2026-11-03-123722-746.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="CPU" />
+      </GoProfileMapEntry>
+    </profile>
   </component>
 </project>

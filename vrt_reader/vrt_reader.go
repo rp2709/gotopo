@@ -56,7 +56,7 @@ func OpenDataset(vrtFilePath string, band int) (*RasterDataset, error) {
 	ds.band = ds.bandMatrix(band, vrtFilePath)
 
 	ds.cache = imageCache{
-		maxSize: 50,
+		maxSize: 2000,
 		time:    0,
 		cache:   make(map[string]*cacheEntry),
 	}

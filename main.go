@@ -101,6 +101,12 @@ func main() {
 		})
 	case CommandGenerateViewsheds:
 		err = viewsheds_generation.Run(viewsheds_generation.GenerateViewshedsConfig{
+			LogLevel:    logLevel,
+			Dbuser:      *dbuser,
+			Dbhost:      *dbhost,
+			Dbname:      *dbname,
+			Dbpwd:       *dbpassword,
+			Dbport:      *dbport,
 			VrtFilePath: *vrtFilePath,
 		})
 	}

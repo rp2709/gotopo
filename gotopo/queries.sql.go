@@ -111,6 +111,33 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 	return items, nil
 }
 
+const getSomeSamplePoints = `-- name: GetSomeSamplePoints :many
+SELECT
+    sid, eid, location
+FROM sample_point
+LIMIT $1
+`
+
+func (q *Queries) GetSomeSamplePoints(ctx context.Context, limit int32) ([]SamplePoint, error) {
+	rows, err := q.db.Query(ctx, getSomeSamplePoints, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SamplePoint
+	for rows.Next() {
+		var i SamplePoint
+		if err := rows.Scan(&i.Sid, &i.Eid, &i.Location); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 type InsertEdgeParams struct {
 	Gid      int32
 	StartVid int32
@@ -120,7 +147,7 @@ type InsertEdgeParams struct {
 
 type InsertSamplePointParams struct {
 	Eid      int32
-	Location interface{}
+	Location *geom.Point
 }
 
 type InsertVertexParams struct {

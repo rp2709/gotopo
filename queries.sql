@@ -35,3 +35,9 @@ FROM edges;
          INSERT INTO sample_point (eid,location)
 VALUES ($1, $2);
 
+-- name: GetSomeSamplePoints :many
+SELECT
+    *
+FROM sample_point
+LIMIT $1;
+

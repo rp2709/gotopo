@@ -21,7 +21,7 @@ type Edge struct {
 type SamplePoint struct {
 	Sid      int32
 	Eid      int32
-	Location interface{}
+	Location *geom.Point
 }
 
 type TlmAusEinfahrt struct {
