@@ -1,6 +1,11 @@
 package viewsheds_generation
 
-import "github.com/rp2709/gotopo/vrt_reader"
+import (
+	"time"
+
+	"github.com/rp2709/gotopo/vrt_reader"
+	"github.com/twpayne/go-geom"
+)
 
 func Run(config GenerateViewshedsConfig) error {
 	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
@@ -8,7 +13,19 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
-	print(ds.ValueAt(2540218, 1181114))
+	directions, err := computeDirectionsVectors(0.0, 0.0, 8)
+	if err != nil {
+		return err
+	}
+
+	ti := time.Now()
+	viewshed := make([]bool, len(directions))
+	for i, d := range directions {
+		viewshed[i] = obstructed(ds, *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{2540218, 1181114}), d, 30000, 4500, LinearStepDistance(5, 0))
+	}
+	tf := time.Now()
+	duration := tf.Sub(ti)
+	println(duration.String())
 
 	return nil
 }
