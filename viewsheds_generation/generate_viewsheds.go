@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/vrt_reader"
 	"github.com/twpayne/go-geom"
 	pgxgeom "github.com/twpayne/pgx-geom"
@@ -41,7 +39,7 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
-	queries := gotopo.New(conn)
+	//queries := gotopo.New(conn)
 
 	slog.Info("Opening VRT raster dataset")
 	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
@@ -49,26 +47,37 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
-	directions, err := computeDirectionsVectors(0.0, 0.0, 8)
+	directions, err := computeDirectionsVectors(0.0, 0.0, 16)
 	if err != nil {
 		return err
 	}
+	/*
+		const limit = 5000
+		slog.Info("Loading sample points from db", "limit", limit)
+		samplePoints, err := queries.GetSomeSamplePoints(ctx, limit)
+		if err != nil {
+			return err
+		}
 
-	const limit = 5000
-	slog.Info("Loading sample points from db", "limit", limit)
-	samplePoints, err := queries.GetSomeSamplePoints(ctx, limit)
+		slog.Info("Start computing hemispherical viewsheds")
+		ti := time.Now()
+		for _, point := range samplePoints {
+			_ = viewshed(ds, *point.Location, directions)
+		}
+		tf := time.Now()
+		duration := tf.Sub(ti)
+		slog.Info("Finished computing hemispherical viewsheds", "duration", duration.String())
+	*/
+	err = SaveViewshedPNG(
+		"viewshed.png",
+		viewshed(ds, *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{2531882.927, 1184492.072}), directions),
+		500,
+		0.0,
+		0.0,
+	)
 	if err != nil {
 		return err
 	}
-
-	slog.Info("Start computing hemispherical viewsheds")
-	ti := time.Now()
-	for _, point := range samplePoints {
-		_ = viewshed(ds, *point.Location, directions)
-	}
-	tf := time.Now()
-	duration := tf.Sub(ti)
-	slog.Info("Finished computing hemispherical viewsheds", "duration", duration.String())
 
 	return nil
 }
