@@ -26,18 +26,24 @@ DELETE
 FROM vertices;
 
 -- name: GetAllEdges :many
-SELECT
-    eid,
-    shape
+SELECT eid,
+       shape
 FROM edges;
 
 -- name: InsertSamplePoint :copyfrom
-         INSERT INTO sample_point (eid,location)
+INSERT INTO sample_point (eid, location)
 VALUES ($1, $2);
 
+-- name: SamplePointsExtent :one
+SELECT * FROM sample_point_extent;
+
 -- name: GetSomeSamplePoints :many
-SELECT
-    *
+SELECT *
 FROM sample_point
 LIMIT $1;
+
+-- name: GetSamplePointsWithin :many
+SELECT *
+FROM sample_point
+WHERE st_within(location,$1);
 

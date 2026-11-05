@@ -24,6 +24,13 @@ type RasterDataset struct {
 	cache     imageCache
 }
 
+/* Prepare area processing loads all files covering the area
+construct a list of the necessary files
+keep only needed files in cache
+instantiate goroutines to open files in parallel
+funnel to main thread that adds them to cache
+*/
+
 func OpenDataset(vrtFilePath string, band int) (*RasterDataset, error) {
 	ds := RasterDataset{}
 	data, err := os.ReadFile(vrtFilePath)
@@ -56,7 +63,7 @@ func OpenDataset(vrtFilePath string, band int) (*RasterDataset, error) {
 	ds.band = ds.bandMatrix(band, vrtFilePath)
 
 	ds.cache = imageCache{
-		maxSize: 2000,
+		maxSize: 5000,
 		time:    0,
 		cache:   make(map[string]*cacheEntry),
 	}

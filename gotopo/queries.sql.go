@@ -33,9 +33,8 @@ func (q *Queries) DeleteAllVertices(ctx context.Context) error {
 }
 
 const getAllEdges = `-- name: GetAllEdges :many
-SELECT
-    eid,
-    shape
+SELECT eid,
+       shape
 FROM edges
 `
 
@@ -111,9 +110,34 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 	return items, nil
 }
 
+const getSamplePointsWithin = `-- name: GetSamplePointsWithin :many
+SELECT sid, eid, location
+FROM sample_point
+WHERE st_within(location,$1)
+`
+
+func (q *Queries) GetSamplePointsWithin(ctx context.Context, stWithin interface{}) ([]SamplePoint, error) {
+	rows, err := q.db.Query(ctx, getSamplePointsWithin, stWithin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []SamplePoint
+	for rows.Next() {
+		var i SamplePoint
+		if err := rows.Scan(&i.Sid, &i.Eid, &i.Location); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSomeSamplePoints = `-- name: GetSomeSamplePoints :many
-SELECT
-    sid, eid, location
+SELECT sid, eid, location
 FROM sample_point
 LIMIT $1
 `
@@ -153,4 +177,15 @@ type InsertSamplePointParams struct {
 type InsertVertexParams struct {
 	Vid      int32
 	Location *geom.Point
+}
+
+const samplePointsExtent = `-- name: SamplePointsExtent :one
+SELECT extent FROM sample_point_extent
+`
+
+func (q *Queries) SamplePointsExtent(ctx context.Context) (geom.Polygon, error) {
+	row := q.db.QueryRow(ctx, samplePointsExtent)
+	var extent geom.Polygon
+	err := row.Scan(&extent)
+	return extent, err
 }

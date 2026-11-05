@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/vrt_reader"
 	"github.com/twpayne/go-geom"
 	pgxgeom "github.com/twpayne/pgx-geom"
@@ -39,45 +41,81 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
-	//queries := gotopo.New(conn)
-
-	slog.Info("Opening VRT raster dataset")
-	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
-	if err != nil {
-		return err
-	}
-
-	directions, err := computeDirectionsVectors(0.0, 0.0, 16)
-	if err != nil {
-		return err
-	}
+	queries := gotopo.New(conn)
 	/*
+		slog.Info("Opening VRT raster dataset")
+		ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
+		if err != nil {
+			return err
+		}
+
+		directions, err := computeDirectionsVectors(0.0, 0.0, 16)
+		if err != nil {
+			return err
+		}
+
 		const limit = 5000
 		slog.Info("Loading sample points from db", "limit", limit)
 		samplePoints, err := queries.GetSomeSamplePoints(ctx, limit)
 		if err != nil {
 			return err
-		}
+		}*/
 
-		slog.Info("Start computing hemispherical viewsheds")
-		ti := time.Now()
-		for _, point := range samplePoints {
-			_ = viewshed(ds, *point.Location, directions)
-		}
-		tf := time.Now()
-		duration := tf.Sub(ti)
-		slog.Info("Finished computing hemispherical viewsheds", "duration", duration.String())
-	*/
-	err = SaveViewshedPNG(
-		"viewshed.png",
-		viewshed(ds, *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{2531882.927, 1184492.072}), directions),
-		500,
-		0.0,
-		0.0,
-	)
+	maximumWorkAreaSize := 10000.0
+
+	samplePointsExtent, err := queries.SamplePointsExtent(ctx)
 	if err != nil {
 		return err
 	}
+
+	samplePointsBounds := samplePointsExtent.Bounds()
+	dimX := samplePointsBounds.Max(0) - samplePointsBounds.Min(0)
+	dimY := samplePointsBounds.Max(1) - samplePointsBounds.Min(1)
+
+	countX := math.Round(dimX/maximumWorkAreaSize + 0.5)
+	countY := math.Round(dimY/maximumWorkAreaSize + 0.5)
+
+	workAreaDimX := dimX / countX
+	workAreaDimY := dimY / countY
+
+	println("countX:", countX)
+	println("countY:", countY)
+	println("workAreaDimX:", workAreaDimX)
+	println("workAreaDimY:", workAreaDimY)
+	println("total working areas:", countX*countY)
+
+	var areasWithSamples uint64 = 0
+	var totalSamples uint64 = 0
+	for i := range int(countX) {
+		minX, maxX := samplePointsBounds.Min(0)+float64(i)*workAreaDimX, samplePointsBounds.Min(0)+float64(i+1)*workAreaDimX
+		for j := range int(countY) {
+			minY, maxY := samplePointsBounds.Min(1)+float64(j)*workAreaDimY, samplePointsBounds.Min(1)+float64(j+1)*workAreaDimY
+			workArea := geom.NewPolygon(geom.XY).SetSRID(samplePointsExtent.SRID()).MustSetCoords([][]geom.Coord{
+				{{minX, maxY}, {maxX, maxY}, {maxX, minY}, {minX, minY}, {minX, maxY}},
+			})
+			points, err := queries.GetSamplePointsWithin(ctx, &workArea)
+			if err != nil {
+				return err
+			}
+			nb := len(points)
+			if nb > 0 {
+				areasWithSamples++
+				totalSamples += uint64(nb)
+			}
+		}
+	}
+	println("Areas with sample points: ", areasWithSamples)
+	println("Average samples per area: ", totalSamples/areasWithSamples)
+	// divide sample points bounds in work regions
+	// a work region is defined by a center square and a maximum distance
+	// print statistics about work regions (the center area, the loaded area, number of them
+	// for each work region :
+	//		load sample points from database
+	// 		prepare area processing(loaded_area)
+	// 		compute viewsheds for all sample points
+	//		debug : print statistics about calculations
+	//		store results in db
+	// done
 
 	return nil
 }

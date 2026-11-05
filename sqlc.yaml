@@ -9,6 +9,12 @@ sql:
         out: "gotopo"
         sql_package: "pgx/v5"
         overrides:
+          - column: "sample_point_extent.extent"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "Polygon"
+
           - column: "tlm_strasse.shape"
             go_type:
               import: "github.com/twpayne/go-geom"

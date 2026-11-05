@@ -24,6 +24,10 @@ type SamplePoint struct {
 	Location *geom.Point
 }
 
+type SamplePointExtent struct {
+	Extent geom.Polygon
+}
+
 type TlmAusEinfahrt struct {
 	Objectid            int32
 	Uuid                pgtype.Text
