@@ -9,6 +9,13 @@ sql:
         out: "gotopo"
         sql_package: "pgx/v5"
         overrides:
+          - column: "work_area.shape"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "Polygon"
+              pointer: true
+
           - column: "sample_point_extent.extent"
             go_type:
               import: "github.com/twpayne/go-geom"

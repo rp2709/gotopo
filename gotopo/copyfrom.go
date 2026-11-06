@@ -110,3 +110,36 @@ func (r iteratorForInsertVertex) Err() error {
 func (q *Queries) InsertVertex(ctx context.Context, arg []InsertVertexParams) (int64, error) {
 	return q.db.CopyFrom(ctx, []string{"vertices"}, []string{"vid", "location"}, &iteratorForInsertVertex{rows: arg})
 }
+
+// iteratorForInsertWorkAreas implements pgx.CopyFromSource.
+type iteratorForInsertWorkAreas struct {
+	rows                 []InsertWorkAreasParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForInsertWorkAreas) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForInsertWorkAreas) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].Num,
+		r.rows[0].Shape,
+	}, nil
+}
+
+func (r iteratorForInsertWorkAreas) Err() error {
+	return nil
+}
+
+func (q *Queries) InsertWorkAreas(ctx context.Context, arg []InsertWorkAreasParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"work_area"}, []string{"num", "shape"}, &iteratorForInsertWorkAreas{rows: arg})
+}

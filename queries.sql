@@ -47,3 +47,19 @@ SELECT *
 FROM sample_point
 WHERE st_within(location,$1);
 
+-- name: ClearWorkAreas :exec
+DELETE FROM work_area;
+
+-- name: InsertWorkAreas :copyfrom
+INSERT INTO work_area (num, shape)
+VALUES ($1,$2);
+
+-- name: GetNextWorkArea :one
+SELECT *
+FROM work_area
+WHERE NOT done
+ORDER BY num
+LIMIT 1;
+
+-- name: UpdateWorkArea :exec
+UPDATE work_area SET done = $1 WHERE num = $2;

@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 	"math"
-	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/vrt_reader"
 	"github.com/twpayne/go-geom"
@@ -29,6 +29,13 @@ func Run(config GenerateViewshedsConfig) error {
 
 	queries := gotopo.New(conn)
 
+	if config.CreateWorkAreas {
+		return createWorkAreas(config, queries, ctx)
+	}
+	return computeViewsheds(config, queries, ctx)
+}
+
+func computeViewsheds(config GenerateViewshedsConfig, queries *gotopo.Queries, ctx context.Context) error {
 	slog.Info("Opening VRT raster dataset")
 	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
 	if err != nil {
@@ -40,6 +47,38 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
+	for workArea, err := queries.GetNextWorkArea(ctx); err == nil; workArea, err = queries.GetNextWorkArea(ctx) {
+		points, err := queries.GetSamplePointsWithin(ctx, workArea.Shape)
+		if err != nil {
+			return err
+		}
+		bounds := workArea.Shape.Bounds()
+
+		ds.LoadArea(
+			bounds.Min(0)-config.MaximumDistance,
+			bounds.Max(0)+config.MaximumDistance,
+			bounds.Min(1)-config.MaximumDistance,
+			bounds.Min(1)+config.MaximumDistance,
+		)
+
+		slog.Info("Calculating viewsheds", "samples", len(points))
+		for _, point := range points {
+			_ = viewshed(ds, *point.Location, directions)
+		}
+
+		slog.Info("Marking area as done", "Area", workArea.Num)
+		err = queries.UpdateWorkArea(ctx, gotopo.UpdateWorkAreaParams{
+			Done: pgtype.Bool{Bool: true, Valid: true},
+			Num:  workArea.Num,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func createWorkAreas(config GenerateViewshedsConfig, queries *gotopo.Queries, ctx context.Context) error {
 	samplePointsExtent, err := queries.SamplePointsExtent(ctx)
 	if err != nil {
 		return err
@@ -61,9 +100,8 @@ func Run(config GenerateViewshedsConfig) error {
 	println("workAreaDimY:", workAreaDimY)
 	println("total working areas:", countX*countY)
 
-	var areasWithSamples uint64 = 0
+	areas := make([]gotopo.InsertWorkAreasParams, 0, int(countX*countY))
 	var totalSamples uint64 = 0
-	ti := time.Now()
 	for i := range int(countX) {
 		minX, maxX := samplePointsBounds.Min(0)+float64(i)*workAreaDimX, samplePointsBounds.Min(0)+float64(i+1)*workAreaDimX
 		for j := range int(countY) {
@@ -78,27 +116,23 @@ func Run(config GenerateViewshedsConfig) error {
 			if len(points) == 0 {
 				continue
 			}
-			areasWithSamples++
 			totalSamples += uint64(len(points))
-			slog.Info("Loading area")
-			ds.LoadArea(
-				minX-config.MaximumDistance,
-				maxX+config.MaximumDistance,
-				minY-config.MaximumDistance,
-				maxY+config.MaximumDistance,
-			)
-			slog.Info("Calculating viewsheds", "samples", len(points))
-			for _, point := range points {
-				_ = viewshed(ds, *point.Location, directions)
-			}
+			areas = append(areas, gotopo.InsertWorkAreasParams{
+				Num:   int32(len(areas)),
+				Shape: workArea,
+			})
 		}
-		break
 	}
-	tf := time.Now()
-	println("Areas with sample points: ", areasWithSamples)
-	println("Average samples per area: ", totalSamples/areasWithSamples)
-	println("Average time per sample point: ",
-		(time.Duration(tf.Sub(ti).Nanoseconds()/int64(totalSamples)) * time.Nanosecond).String())
+	println("Areas with sample points: ", len(areas))
+	println("Average samples per area: ", totalSamples/uint64(len(areas)))
+
+	if err = queries.ClearWorkAreas(ctx); err != nil {
+		return err
+	}
+
+	if _, err = queries.InsertWorkAreas(ctx, areas); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -117,6 +151,7 @@ type GenerateViewshedsConfig struct {
 	MaximumWorkAreaSize float64
 	MaximumDistance     float64
 	VrtFilePath         string
+	CreateWorkAreas     bool
 }
 
 func NextDistance(x float64) float64 {

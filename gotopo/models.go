@@ -873,3 +873,9 @@ type Vertex struct {
 	Vid      int32
 	Location *geom.Point
 }
+
+type WorkArea struct {
+	Num   int32
+	Done  pgtype.Bool
+	Shape *geom.Polygon
+}

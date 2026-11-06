@@ -8,9 +8,19 @@ package gotopo
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	schema "github.com/rp2709/gotopo/schema"
 	geom "github.com/twpayne/go-geom"
 )
+
+const clearWorkAreas = `-- name: ClearWorkAreas :exec
+DELETE FROM work_area
+`
+
+func (q *Queries) ClearWorkAreas(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, clearWorkAreas)
+	return err
+}
 
 const deleteAllEdges = `-- name: DeleteAllEdges :exec
 DELETE
@@ -61,6 +71,21 @@ func (q *Queries) GetAllEdges(ctx context.Context) ([]GetAllEdgesRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getNextWorkArea = `-- name: GetNextWorkArea :one
+SELECT num, done, shape
+FROM work_area
+WHERE NOT done
+ORDER BY num
+LIMIT 1
+`
+
+func (q *Queries) GetNextWorkArea(ctx context.Context) (WorkArea, error) {
+	row := q.db.QueryRow(ctx, getNextWorkArea)
+	var i WorkArea
+	err := row.Scan(&i.Num, &i.Done, &i.Shape)
+	return i, err
 }
 
 const getRoads = `-- name: GetRoads :many
@@ -179,6 +204,11 @@ type InsertVertexParams struct {
 	Location *geom.Point
 }
 
+type InsertWorkAreasParams struct {
+	Num   int32
+	Shape *geom.Polygon
+}
+
 const samplePointsExtent = `-- name: SamplePointsExtent :one
 SELECT extent FROM sample_point_extent
 `
@@ -188,4 +218,18 @@ func (q *Queries) SamplePointsExtent(ctx context.Context) (geom.Polygon, error) 
 	var extent geom.Polygon
 	err := row.Scan(&extent)
 	return extent, err
+}
+
+const updateWorkArea = `-- name: UpdateWorkArea :exec
+UPDATE work_area SET done = $1 WHERE num = $2
+`
+
+type UpdateWorkAreaParams struct {
+	Done pgtype.Bool
+	Num  int32
+}
+
+func (q *Queries) UpdateWorkArea(ctx context.Context, arg UpdateWorkAreaParams) error {
+	_, err := q.db.Exec(ctx, updateWorkArea, arg.Done, arg.Num)
+	return err
 }

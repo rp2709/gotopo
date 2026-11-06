@@ -75,6 +75,7 @@ func main() {
 	flag.StringVar(&generateViewshedsConfig.VrtFilePath, "vrt", "", "Path to .vrt file indexing the surface model's tiles")
 	flag.Float64Var(&generateViewshedsConfig.MaximumWorkAreaSize, "max-work-area-size", 10000, "maximum size of work areas")
 	flag.Float64Var(&generateViewshedsConfig.MaximumDistance, "max-distance", 40000, "maximum distance to explore from each sample point")
+	flag.BoolVar(&generateViewshedsConfig.CreateWorkAreas, "create-work-areas", false, "Create work areas")
 
 	flag.Parse()
 	slog.SetLogLoggerLevel(slog.Level(*verbosity))

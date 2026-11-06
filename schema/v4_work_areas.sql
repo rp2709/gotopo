@@ -1,0 +1,7 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+DROP TABLE IF EXISTS work_area;
+CREATE TABLE IF NOT EXISTS work_area(
+    num INTEGER PRIMARY KEY,
+    done BOOLEAN DEFAULT false,
+    shape geometry(POLYGON,2056)
+);
