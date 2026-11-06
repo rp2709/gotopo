@@ -65,5 +65,13 @@
         <option name="profileType" value="CPU" />
       </GoProfileMapEntry>
     </profile>
+    <profile entry="$USER_HOME$/GoLandProfiles/generate-viewsheds-dem-cpu-2026-11-06-120836-162.pprof">
+      <GoProfileMapEntry>
+        <option name="buildAnchorMillis" value="1793963293937" />
+        <option name="file" value="generate-viewsheds-dem-cpu-2026-11-06-120836-162.pprof" />
+        <option name="ours" value="true" />
+        <option name="profileType" value="CPU" />
+      </GoProfileMapEntry>
+    </profile>
   </component>
 </project>

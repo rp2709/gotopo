@@ -2,36 +2,37 @@ package vrt_reader
 
 import (
 	"log/slog"
-	"math"
 	"os"
 	"runtime"
 
 	"github.com/rp2709/geotiff/geotiff"
 )
 
+type imageToLoad struct {
+	datasetTile
+	x, y int
+}
 type loadedImage struct {
-	img      *geotiff.GeoTIFF
-	filename string
-	err      error
+	imageToLoad
+	err error
 }
 
-func loadWorker(toLoad chan string, toAddToCache chan loadedImage) {
-	for filename := range toLoad {
-		file, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+func loadWorker(toLoad chan imageToLoad, toAddToCache chan loadedImage) {
+	for e := range toLoad {
+		file, err := os.OpenFile(e.file, os.O_RDONLY, os.ModePerm)
 		if err != nil {
-			toAddToCache <- loadedImage{nil, filename, err}
+			toAddToCache <- loadedImage{err: err}
 		}
 
-		img, err := geotiff.Read(file)
+		e.img, err = geotiff.Read(file)
 		_ = file.Close()
 		if err != nil {
-			toAddToCache <- loadedImage{nil, filename, err}
+			toAddToCache <- loadedImage{err: err}
 		}
 
 		toAddToCache <- loadedImage{
-			img:      img,
-			filename: filename,
-			err:      nil,
+			imageToLoad: e,
+			err:         nil,
 		}
 	}
 }
@@ -40,30 +41,28 @@ func (ds *RasterDataset) LoadArea(minX, maxX, minY, maxY float64) {
 	tlX, tlY := ds.tile(minX, maxY)
 	brX, brY := ds.tile(maxX, minY)
 
-	toLoad := make(chan string, (brX-tlX)*(brY-tlY))
+	toLoad := make(chan imageToLoad, (brX-tlX)*(brY-tlY))
 	toAddToCache := make(chan loadedImage, (brX-tlX)*(brY-tlY))
 
-	for len(ds.cache.cache) > ds.cache.maxSize {
-		var minTime uint64 = math.MaxUint64
-		minP := ""
-		for p, entry := range ds.cache.cache {
-			if entry.lastAccessed < minTime {
-				minP = p
-				minTime = entry.lastAccessed
+	// cleanup outside of loaded area
+	for i := range len(ds.band) {
+		for j := range len(ds.band[i]) {
+			if !(i >= tlX && i <= brX && j >= brY && j <= tlY) {
+				ds.band[i][j].img = nil
 			}
 		}
-		delete(ds.cache.cache, minP)
 	}
 
+	// load new tiles
 	fileCount := 0
 	for i := tlX; i <= brX; i++ {
 		for j := tlY; j <= brY; j++ {
 			if i < 0 || j < 0 || i >= len(ds.band) || j >= len(ds.band[i]) {
 				continue
 			}
-			file := ds.band[i][j]
-			if file != "" && ds.cache.cache[file] == nil {
-				toLoad <- file
+			tile := ds.band[i][j]
+			if tile.file != "" && tile.img == nil {
+				toLoad <- imageToLoad{tile, i, j}
 				fileCount++
 			}
 		}
@@ -75,11 +74,11 @@ func (ds *RasterDataset) LoadArea(minX, maxX, minY, maxY float64) {
 	}
 
 	for range fileCount {
-		file := <-toAddToCache
-		if file.err != nil {
-			slog.Warn("Error opening a tile file", "File", file.filename, "Error", file.err)
+		tile := <-toAddToCache
+		if tile.err != nil {
+			slog.Warn("Error opening a tile file", "File", tile.file, "Error", tile.err)
 			continue
 		}
-		ds.cache.cache[file.filename] = &cacheEntry{image: file.img}
+		ds.band[tile.x][tile.y] = tile.datasetTile
 	}
 }
