@@ -2,7 +2,6 @@ package sample_edges
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"math"
 
@@ -13,24 +12,13 @@ import (
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
-const connectionStringFmt = "user=%s dbname=%s sslmode=prefer host=%s password=%s port=%d"
-
 func Run(config SampleEdgesConfig) error {
 	previousLogLevel := slog.SetLogLoggerLevel(config.LogLevel)
 	defer slog.SetLogLoggerLevel(previousLogLevel)
 
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(
-		ctx, fmt.Sprintf(
-			connectionStringFmt,
-			config.Dbuser,
-			config.Dbname,
-			config.Dbhost,
-			config.Dbpwd,
-			config.Dbport,
-		),
-	)
+	conn, err := pgx.Connect(ctx, config.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -96,11 +84,7 @@ func Run(config SampleEdgesConfig) error {
 
 type SampleEdgesConfig struct {
 	LogLevel slog.Level
-	Dbuser   string
-	Dbname   string
-	Dbpwd    string
-	Dbhost   string
-	Dbport   int
+	gotopo.DatabaseConfig
 
 	SampleInterval float64
 }

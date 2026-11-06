@@ -2,7 +2,6 @@ package graph_construction
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 
@@ -13,32 +12,21 @@ import (
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
-const connectionStringFmt = "user=%s dbname=%s sslmode=prefer host=%s password=%s port=%d"
-
 func Run(config GraphConstructionConfig) error {
 	previousLogLevel := slog.SetLogLoggerLevel(config.LogLevel)
 	defer slog.SetLogLoggerLevel(previousLogLevel)
 
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(
-		ctx, fmt.Sprintf(
-			connectionStringFmt,
-			config.Dbuser,
-			config.Dbname,
-			config.Dbhost,
-			config.Dbpwd,
-			config.Dbport,
-		),
-	)
+	conn, err := pgx.Connect(ctx, config.ConnectionString())
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer conn.Close(ctx)
 
 	err = pgxgeom.Register(ctx, conn)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	queries := gotopo.New(conn)
@@ -60,7 +48,7 @@ func Run(config GraphConstructionConfig) error {
 	slog.Info("Saving graph")
 	err = SaveGraph(ctx, conn, graph)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	slog.Info("Done")
@@ -69,11 +57,7 @@ func Run(config GraphConstructionConfig) error {
 
 type GraphConstructionConfig struct {
 	LogLevel slog.Level
-	Dbuser   string
-	Dbname   string
-	Dbpwd    string
-	Dbhost   string
-	Dbport   int
+	gotopo.DatabaseConfig
 
 	ExplorationLimit int64
 	StartX, StartY   float64

@@ -2,7 +2,6 @@ package viewsheds_generation
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"math"
 	"time"
@@ -14,24 +13,13 @@ import (
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
-const connectionStringFmt = "user=%s dbname=%s sslmode=prefer host=%s password=%s port=%d"
-
 func Run(config GenerateViewshedsConfig) error {
 	previousLogLevel := slog.SetLogLoggerLevel(config.LogLevel)
 	defer slog.SetLogLoggerLevel(previousLogLevel)
 
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(
-		ctx, fmt.Sprintf(
-			connectionStringFmt,
-			config.Dbuser,
-			config.Dbname,
-			config.Dbhost,
-			config.Dbpwd,
-			config.Dbport,
-		),
-	)
+	conn, err := pgx.Connect(ctx, config.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -131,11 +119,7 @@ func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vecto
 
 type GenerateViewshedsConfig struct {
 	LogLevel slog.Level
-	Dbuser   string
-	Dbname   string
-	Dbpwd    string
-	Dbhost   string
-	Dbport   int
+	gotopo.DatabaseConfig
 
 	VrtFilePath string
 }

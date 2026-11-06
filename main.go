@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 
+	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/graph_construction"
 	"github.com/rp2709/gotopo/sample_edges"
 	"github.com/rp2709/gotopo/viewsheds_generation"
@@ -45,26 +46,34 @@ func main() {
 		for name, command := range CommandFromName {
 			fmt.Fprintf(os.Stderr, "  - %s : %s\n", name, CommandDescription[command])
 		}
+		fmt.Fprintln(os.Stderr, "Options:")
 		flag.PrintDefaults()
 	}
 
-	dbhost := flag.String("dbhost", "localhost", "Database host")
-	dbport := flag.Int("dbport", 5432, "Database port")
-	dbuser := flag.String("dbuser", "postgres", "Database user")
-	dbname := flag.String("dbname", "default", "Database name")
-	dbpassword := flag.String("dbpassword", os.Getenv("DBPASSWORD"), "Database password")
-	exploration_limit := flag.Int64("exploration-limit", math.MaxInt64, "Limits the exploration of the graph to a set amount of vertices")
+	// Database configuration, shared by all commands
+	var dbConfig gotopo.DatabaseConfig
+	flag.StringVar(&dbConfig.Dbhost, "dbhost", "localhost", "Database host")
+	flag.IntVar(&dbConfig.Dbport, "dbport", 5432, "Database port")
+	flag.StringVar(&dbConfig.Dbuser, "dbuser", "postgres", "Database user")
+	flag.StringVar(&dbConfig.Dbname, "dbname", "default", "Database name")
+	flag.StringVar(&dbConfig.Dbpwd, "dbpassword", os.Getenv("DBPASSWORD"), "Database password")
+
+	// graph-construction specific flags
+	explorationLimit := flag.Int64("exploration-limit", math.MaxInt64, "Limits the exploration of the graph to a set amount of vertices")
 	verbosity := flag.Int("verbosity", int(slog.LevelInfo), "Logging level. 0 -> info, -4 -> debug")
 	startX := flag.Float64("startingX", 2540215.68, "x coordinate of starting point for graph exploration")
 	startY := flag.Float64("startingY", 1181115.23, "y coordinate of starting point for graph exploration")
 
+	// sample edges flags
 	sampleInterval := flag.Float64("sample-interval", 10.0, "distance between every sample point in meters")
 
+	// viewshed-generation specific flags
 	vrtFilePath := flag.String("vrt", "", "Path to .vrt file indexing the surface model's tiles")
 
 	flag.Parse()
 	logLevel := slog.Level(*verbosity)
 
+	// read command and branch out accordingly
 	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(1)
@@ -82,32 +91,20 @@ func main() {
 			LogLevel:         logLevel,
 			StartX:           *startX,
 			StartY:           *startY,
-			ExplorationLimit: *exploration_limit,
-			Dbuser:           *dbuser,
-			Dbhost:           *dbhost,
-			Dbname:           *dbname,
-			Dbpwd:            *dbpassword,
-			Dbport:           *dbport,
+			ExplorationLimit: *explorationLimit,
+			DatabaseConfig:   dbConfig,
 		})
 	case CommandSampleEdges:
 		err = sample_edges.Run(sample_edges.SampleEdgesConfig{
 			LogLevel:       logLevel,
-			Dbuser:         *dbuser,
-			Dbhost:         *dbhost,
-			Dbname:         *dbname,
-			Dbpwd:          *dbpassword,
-			Dbport:         *dbport,
+			DatabaseConfig: dbConfig,
 			SampleInterval: *sampleInterval,
 		})
 	case CommandGenerateViewsheds:
 		err = viewsheds_generation.Run(viewsheds_generation.GenerateViewshedsConfig{
-			LogLevel:    logLevel,
-			Dbuser:      *dbuser,
-			Dbhost:      *dbhost,
-			Dbname:      *dbname,
-			Dbpwd:       *dbpassword,
-			Dbport:      *dbport,
-			VrtFilePath: *vrtFilePath,
+			LogLevel:       logLevel,
+			DatabaseConfig: dbConfig,
+			VrtFilePath:    *vrtFilePath,
 		})
 	}
 
