@@ -14,12 +14,9 @@ import (
 )
 
 func Run(config GenerateViewshedsConfig) error {
-	previousLogLevel := slog.SetLogLoggerLevel(config.LogLevel)
-	defer slog.SetLogLoggerLevel(previousLogLevel)
-
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, config.ConnectionString())
+	conn, err := pgx.Connect(ctx, config.Db.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -118,8 +115,7 @@ func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vecto
 }
 
 type GenerateViewshedsConfig struct {
-	LogLevel slog.Level
-	gotopo.DatabaseConfig
+	Db *gotopo.DatabaseConfig
 
 	VrtFilePath string
 }

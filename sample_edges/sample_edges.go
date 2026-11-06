@@ -13,12 +13,9 @@ import (
 )
 
 func Run(config SampleEdgesConfig) error {
-	previousLogLevel := slog.SetLogLoggerLevel(config.LogLevel)
-	defer slog.SetLogLoggerLevel(previousLogLevel)
-
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, config.ConnectionString())
+	conn, err := pgx.Connect(ctx, config.Db.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -83,8 +80,6 @@ func Run(config SampleEdgesConfig) error {
 }
 
 type SampleEdgesConfig struct {
-	LogLevel slog.Level
-	gotopo.DatabaseConfig
-
+	Db             *gotopo.DatabaseConfig
 	SampleInterval float64
 }

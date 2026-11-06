@@ -13,12 +13,9 @@ import (
 )
 
 func Run(config GraphConstructionConfig) error {
-	previousLogLevel := slog.SetLogLoggerLevel(config.LogLevel)
-	defer slog.SetLogLoggerLevel(previousLogLevel)
-
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, config.ConnectionString())
+	conn, err := pgx.Connect(ctx, config.Db.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -56,8 +53,7 @@ func Run(config GraphConstructionConfig) error {
 }
 
 type GraphConstructionConfig struct {
-	LogLevel slog.Level
-	gotopo.DatabaseConfig
+	Db *gotopo.DatabaseConfig
 
 	ExplorationLimit int64
 	StartX, StartY   float64

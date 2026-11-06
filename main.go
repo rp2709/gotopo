@@ -58,20 +58,24 @@ func main() {
 	flag.StringVar(&dbConfig.Dbname, "dbname", "default", "Database name")
 	flag.StringVar(&dbConfig.Dbpwd, "dbpassword", os.Getenv("DBPASSWORD"), "Database password")
 
-	// graph-construction specific flags
-	explorationLimit := flag.Int64("exploration-limit", math.MaxInt64, "Limits the exploration of the graph to a set amount of vertices")
 	verbosity := flag.Int("verbosity", int(slog.LevelInfo), "Logging level. 0 -> info, -4 -> debug")
-	startX := flag.Float64("startingX", 2540215.68, "x coordinate of starting point for graph exploration")
-	startY := flag.Float64("startingY", 1181115.23, "y coordinate of starting point for graph exploration")
+
+	// graph-construction specific flags
+	graphConstructionConfig := graph_construction.GraphConstructionConfig{Db: &dbConfig}
+	flag.Int64Var(&graphConstructionConfig.ExplorationLimit, "exploration-limit", math.MaxInt64, "Limits the exploration of the graph to a set amount of vertices")
+	flag.Float64Var(&graphConstructionConfig.StartX, "startingX", 2540215.68, "x coordinate of starting point for graph exploration")
+	flag.Float64Var(&graphConstructionConfig.StartY, "startingY", 1181115.23, "y coordinate of starting point for graph exploration")
 
 	// sample edges flags
-	sampleInterval := flag.Float64("sample-interval", 10.0, "distance between every sample point in meters")
+	sampleEdgesConfig := sample_edges.SampleEdgesConfig{Db: &dbConfig}
+	flag.Float64Var(&sampleEdgesConfig.SampleInterval, "sample-interval", 10.0, "distance between every sample point in meters")
 
 	// viewshed-generation specific flags
-	vrtFilePath := flag.String("vrt", "", "Path to .vrt file indexing the surface model's tiles")
+	generateViewshedsConfig := viewsheds_generation.GenerateViewshedsConfig{Db: &dbConfig}
+	flag.StringVar(&generateViewshedsConfig.VrtFilePath, "vrt", "", "Path to .vrt file indexing the surface model's tiles")
 
 	flag.Parse()
-	logLevel := slog.Level(*verbosity)
+	slog.SetLogLoggerLevel(slog.Level(*verbosity))
 
 	// read command and branch out accordingly
 	if flag.NArg() < 1 {
@@ -87,27 +91,12 @@ func main() {
 	var err error
 	switch command {
 	case CommandConstructGraph:
-		err = graph_construction.Run(graph_construction.GraphConstructionConfig{
-			LogLevel:         logLevel,
-			StartX:           *startX,
-			StartY:           *startY,
-			ExplorationLimit: *explorationLimit,
-			DatabaseConfig:   dbConfig,
-		})
+		err = graph_construction.Run(graphConstructionConfig)
 	case CommandSampleEdges:
-		err = sample_edges.Run(sample_edges.SampleEdgesConfig{
-			LogLevel:       logLevel,
-			DatabaseConfig: dbConfig,
-			SampleInterval: *sampleInterval,
-		})
+		err = sample_edges.Run(sampleEdgesConfig)
 	case CommandGenerateViewsheds:
-		err = viewsheds_generation.Run(viewsheds_generation.GenerateViewshedsConfig{
-			LogLevel:       logLevel,
-			DatabaseConfig: dbConfig,
-			VrtFilePath:    *vrtFilePath,
-		})
+		err = viewsheds_generation.Run(generateViewshedsConfig)
 	}
-
 	if err != nil {
 		slog.Error(fmt.Sprintf("command %s failed", CommandToName[command]), "error", err)
 		os.Exit(3 + int(command))
