@@ -40,9 +40,6 @@ func Run(config GenerateViewshedsConfig) error {
 		return err
 	}
 
-	maximumWorkAreaSize := 10000.0
-	maxDistance := 40000.0
-
 	samplePointsExtent, err := queries.SamplePointsExtent(ctx)
 	if err != nil {
 		return err
@@ -52,8 +49,8 @@ func Run(config GenerateViewshedsConfig) error {
 	dimX := samplePointsBounds.Max(0) - samplePointsBounds.Min(0)
 	dimY := samplePointsBounds.Max(1) - samplePointsBounds.Min(1)
 
-	countX := math.Round(dimX/maximumWorkAreaSize + 0.5)
-	countY := math.Round(dimY/maximumWorkAreaSize + 0.5)
+	countX := math.Round(dimX/config.MaximumWorkAreaSize + 0.5) // + 0.5 to round up
+	countY := math.Round(dimY/config.MaximumWorkAreaSize + 0.5)
 
 	workAreaDimX := dimX / countX
 	workAreaDimY := dimY / countY
@@ -85,10 +82,10 @@ func Run(config GenerateViewshedsConfig) error {
 			totalSamples += uint64(len(points))
 			slog.Info("Loading area")
 			ds.LoadArea(
-				minX-maxDistance,
-				maxX+maxDistance,
-				minY-maxDistance,
-				maxY+maxDistance,
+				minX-config.MaximumDistance,
+				maxX+config.MaximumDistance,
+				minY-config.MaximumDistance,
+				maxY+config.MaximumDistance,
 			)
 			slog.Info("Calculating viewsheds", "samples", len(points))
 			for _, point := range points {
@@ -117,7 +114,9 @@ func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vecto
 type GenerateViewshedsConfig struct {
 	Db *gotopo.DatabaseConfig
 
-	VrtFilePath string
+	MaximumWorkAreaSize float64
+	MaximumDistance     float64
+	VrtFilePath         string
 }
 
 func NextDistance(x float64) float64 {
