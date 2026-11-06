@@ -24,13 +24,6 @@ type RasterDataset struct {
 	cache     imageCache
 }
 
-/* Prepare area processing loads all files covering the area
-construct a list of the necessary files
-keep only needed files in cache
-instantiate goroutines to open files in parallel
-funnel to main thread that adds them to cache
-*/
-
 func OpenDataset(vrtFilePath string, band int) (*RasterDataset, error) {
 	ds := RasterDataset{}
 	data, err := os.ReadFile(vrtFilePath)
@@ -63,7 +56,7 @@ func OpenDataset(vrtFilePath string, band int) (*RasterDataset, error) {
 	ds.band = ds.bandMatrix(band, vrtFilePath)
 
 	ds.cache = imageCache{
-		maxSize: 5000,
+		maxSize: 8000,
 		time:    0,
 		cache:   make(map[string]*cacheEntry),
 	}
@@ -71,25 +64,10 @@ func OpenDataset(vrtFilePath string, band int) (*RasterDataset, error) {
 	return &ds, nil
 }
 
-func (ds *RasterDataset) ValueAt(x, y float64) float32 {
-	X, Y := ds.gt.applyTransform(x, y)
+func (ds *RasterDataset) ValueAt(x, y float64, dynamicLoad bool) float32 {
 
-	// Check raster bounds before calculating tile indices.
-	if math.IsNaN(X) || math.IsNaN(Y) ||
-		math.IsInf(X, 0) || math.IsInf(Y, 0) ||
-		X < 0 || Y < 0 ||
-		X >= float64(ds.dataset.RasterXSize) ||
-		Y >= float64(ds.dataset.RasterYSize) {
-		return float32(ds.nodata)
-	}
-
-	pixelX := int(math.Floor(X))
-	pixelY := int(math.Floor(Y))
-
-	tileX := pixelX / ds.tileSizeX
-	tileY := pixelY / ds.tileSizeY
-
-	if tileX >= len(ds.band) || tileY >= len(ds.band[tileX]) {
+	tileX, tileY := ds.tile(x, y)
+	if tileX < 0 || tileY < 0 || tileX >= len(ds.band) || tileY >= len(ds.band[tileX]) {
 		return float32(ds.nodata)
 	}
 
@@ -97,14 +75,22 @@ func (ds *RasterDataset) ValueAt(x, y float64) float32 {
 	if file == "" {
 		return float32(ds.nodata)
 	}
-
-	value, err := ds.readValue(file, x, y)
+	value, err := ds.readValue(file, x, y, dynamicLoad)
 	if err != nil {
-		slog.Warn("Error reading value",
-			"x", x,
-			"y", y,
-			"err", err,
-		)
+		// some tiles may be smaller at the edges, only print on debug
+		if tileX == 0 || tileY == 0 || tileX == ds.tileSizeX || tileY == ds.tileSizeY {
+			slog.Debug("Error reading value",
+				"x", x,
+				"y", y,
+				"err", err,
+			)
+		} else {
+			slog.Warn("Error reading value",
+				"x", x,
+				"y", y,
+				"err", err,
+			)
+		}
 		return float32(ds.nodata)
 	}
 
@@ -122,6 +108,15 @@ type imageCache struct {
 }
 
 func (cache *imageCache) get(path string) (*geotiff.GeoTIFF, error) {
+	cache.time++
+	if img, ok := cache.cache[path]; ok {
+		img.lastAccessed = cache.time
+		return img.image, nil
+	}
+	return nil, fmt.Errorf("couldn't get image %s from cache", path)
+}
+
+func (cache *imageCache) getOrLoad(path string) (*geotiff.GeoTIFF, error) {
 	cache.time++
 	if img, ok := cache.cache[path]; ok {
 		img.lastAccessed = cache.time
@@ -156,8 +151,14 @@ func (cache *imageCache) get(path string) (*geotiff.GeoTIFF, error) {
 	return img, nil
 }
 
-func (ds *RasterDataset) readValue(path string, x float64, y float64) (float32, error) {
-	img, err := ds.cache.get(path)
+func (ds *RasterDataset) readValue(path string, x float64, y float64, dynamicLoad bool) (float32, error) {
+	var img *geotiff.GeoTIFF
+	var err error
+	if dynamicLoad {
+		img, err = ds.cache.getOrLoad(path)
+	} else {
+		img, err = ds.cache.get(path)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -206,6 +207,17 @@ func (band VRTRasterBand) allSourcesSameDimensions() bool {
 		}
 	}
 	return true
+}
+
+func (ds *RasterDataset) tile(x, y float64) (int, int) {
+	X, Y := ds.gt.applyTransform(x, y)
+
+	pixelX := int(math.Floor(X))
+	pixelY := int(math.Floor(Y))
+
+	tileX := pixelX / ds.tileSizeX
+	tileY := pixelY / ds.tileSizeY
+	return tileX, tileY
 }
 
 func (gt geoTransform) applyTransform(x float64, y float64) (float64, float64) {

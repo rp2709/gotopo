@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rp2709/gotopo/gotopo"
@@ -42,26 +43,20 @@ func Run(config GenerateViewshedsConfig) error {
 	}
 
 	queries := gotopo.New(conn)
-	/*
-		slog.Info("Opening VRT raster dataset")
-		ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
-		if err != nil {
-			return err
-		}
 
-		directions, err := computeDirectionsVectors(0.0, 0.0, 16)
-		if err != nil {
-			return err
-		}
+	slog.Info("Opening VRT raster dataset")
+	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
+	if err != nil {
+		return err
+	}
 
-		const limit = 5000
-		slog.Info("Loading sample points from db", "limit", limit)
-		samplePoints, err := queries.GetSomeSamplePoints(ctx, limit)
-		if err != nil {
-			return err
-		}*/
+	directions, err := computeDirectionsVectors(0.0, 0.0, 16)
+	if err != nil {
+		return err
+	}
 
 	maximumWorkAreaSize := 10000.0
+	maxDistance := 40000.0
 
 	samplePointsExtent, err := queries.SamplePointsExtent(ctx)
 	if err != nil {
@@ -86,6 +81,7 @@ func Run(config GenerateViewshedsConfig) error {
 
 	var areasWithSamples uint64 = 0
 	var totalSamples uint64 = 0
+	ti := time.Now()
 	for i := range int(countX) {
 		minX, maxX := samplePointsBounds.Min(0)+float64(i)*workAreaDimX, samplePointsBounds.Min(0)+float64(i+1)*workAreaDimX
 		for j := range int(countY) {
@@ -97,25 +93,30 @@ func Run(config GenerateViewshedsConfig) error {
 			if err != nil {
 				return err
 			}
-			nb := len(points)
-			if nb > 0 {
-				areasWithSamples++
-				totalSamples += uint64(nb)
+			if len(points) == 0 {
+				continue
+			}
+			areasWithSamples++
+			totalSamples += uint64(len(points))
+			slog.Info("Loading area")
+			ds.LoadArea(
+				minX-maxDistance,
+				maxX+maxDistance,
+				minY-maxDistance,
+				maxY+maxDistance,
+			)
+			slog.Info("Calculating viewsheds", "samples", len(points))
+			for _, point := range points {
+				_ = viewshed(ds, *point.Location, directions)
 			}
 		}
+		break
 	}
+	tf := time.Now()
 	println("Areas with sample points: ", areasWithSamples)
 	println("Average samples per area: ", totalSamples/areasWithSamples)
-	// divide sample points bounds in work regions
-	// a work region is defined by a center square and a maximum distance
-	// print statistics about work regions (the center area, the loaded area, number of them
-	// for each work region :
-	//		load sample points from database
-	// 		prepare area processing(loaded_area)
-	// 		compute viewsheds for all sample points
-	//		debug : print statistics about calculations
-	//		store results in db
-	// done
+	println("Average time per sample point: ",
+		(time.Duration(tf.Sub(ti).Nanoseconds()/int64(totalSamples)) * time.Nanosecond).String())
 
 	return nil
 }

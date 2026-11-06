@@ -8,7 +8,7 @@ import (
 )
 
 func obstructed(ds *vrt_reader.RasterDataset, source geom.Point, direction vector3, maxDistance float64, maxAltitude float64, nextDistance func(float64) float64) bool {
-	sourceAltitude := float64(ds.ValueAt(source.X(), source.Y()))
+	sourceAltitude := float64(ds.ValueAt(source.X(), source.Y(), false))
 	horizontalDirectionLength := math.Sqrt(direction.x*direction.x + direction.y*direction.y)
 	if horizontalDirectionLength == 0 {
 		return false
@@ -20,7 +20,7 @@ func obstructed(ds *vrt_reader.RasterDataset, source geom.Point, direction vecto
 		if stepAltitude > maxAltitude {
 			break
 		}
-		localAltitude := float64(ds.ValueAt(source.X()+distanceAlongDirection*direction.x, source.Y()+distanceAlongDirection*direction.y))
+		localAltitude := float64(ds.ValueAt(source.X()+distanceAlongDirection*direction.x, source.Y()+distanceAlongDirection*direction.y, false))
 		if stepAltitude <= localAltitude {
 			return true // found some piece of terrain higher than our sight
 		}
