@@ -136,7 +136,7 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 }
 
 const getSamplePointsWithin = `-- name: GetSamplePointsWithin :many
-SELECT sid, eid, location
+SELECT sid, eid, location, viewshed
 FROM sample_point
 WHERE st_within(location,$1)
 `
@@ -150,7 +150,12 @@ func (q *Queries) GetSamplePointsWithin(ctx context.Context, stWithin interface{
 	var items []SamplePoint
 	for rows.Next() {
 		var i SamplePoint
-		if err := rows.Scan(&i.Sid, &i.Eid, &i.Location); err != nil {
+		if err := rows.Scan(
+			&i.Sid,
+			&i.Eid,
+			&i.Location,
+			&i.Viewshed,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -162,7 +167,7 @@ func (q *Queries) GetSamplePointsWithin(ctx context.Context, stWithin interface{
 }
 
 const getSomeSamplePoints = `-- name: GetSomeSamplePoints :many
-SELECT sid, eid, location
+SELECT sid, eid, location, viewshed
 FROM sample_point
 LIMIT $1
 `
@@ -176,7 +181,12 @@ func (q *Queries) GetSomeSamplePoints(ctx context.Context, limit int32) ([]Sampl
 	var items []SamplePoint
 	for rows.Next() {
 		var i SamplePoint
-		if err := rows.Scan(&i.Sid, &i.Eid, &i.Location); err != nil {
+		if err := rows.Scan(
+			&i.Sid,
+			&i.Eid,
+			&i.Location,
+			&i.Viewshed,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -218,6 +228,15 @@ func (q *Queries) SamplePointsExtent(ctx context.Context) (geom.Polygon, error) 
 	var extent geom.Polygon
 	err := row.Scan(&extent)
 	return extent, err
+}
+
+const updateSamplePoint = `-- name: UpdateSamplePoint :exec
+UPDATE sample_point SET viewshed = $1
+`
+
+func (q *Queries) UpdateSamplePoint(ctx context.Context, viewshed pgtype.Bits) error {
+	_, err := q.db.Exec(ctx, updateSamplePoint, viewshed)
+	return err
 }
 
 const updateWorkArea = `-- name: UpdateWorkArea :exec

@@ -22,6 +22,7 @@ type SamplePoint struct {
 	Sid      int32
 	Eid      int32
 	Location *geom.Point
+	Viewshed pgtype.Bits
 }
 
 type SamplePointExtent struct {

@@ -8,8 +8,9 @@ import (
 	"image/png"
 	"io"
 	"math"
-	"math/bits"
 	"os"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type vector3 struct {
@@ -17,63 +18,47 @@ type vector3 struct {
 }
 
 // computeDirectionsVectors distributes direction vectors over a hemisphere.
-//
-// The number of elevation steps is floor(log2(2*sizeBytes + 1)).
-// Each elevation step doubles the number of azimuth samples.
 func computeDirectionsVectors(
-	deadzone float64,
-	zenithDeadzone float64,
-	sizeBytes int64,
+	minimumAngleFromHorizon float64,
+	minimumAngleFromZenith float64,
+	sizeBits uint32,
 ) ([]vector3, error) {
-	if sizeBytes <= 0 {
-		return nil, fmt.Errorf("sizeBytes must be greater than zero")
-	}
+	directions := make([]vector3, 0, sizeBits)
 
-	if math.IsNaN(deadzone) || math.IsInf(deadzone, 0) ||
-		math.IsNaN(zenithDeadzone) || math.IsInf(zenithDeadzone, 0) {
-		return nil, fmt.Errorf("deadzone angles must be finite")
-	}
+	nbStepsAzimuth, nbStepsZenith := smallestPairFactors(sizeBits)
+	zenithAngleToCover := math.Pi/2 - minimumAngleFromZenith - minimumAngleFromHorizon
+	zenithStep := zenithAngleToCover / float64(nbStepsZenith)
+	azimuthStep := math.Pi * 2 / float64(nbStepsAzimuth)
+	zenithOffset := minimumAngleFromHorizon + zenithStep/2
+	azimuthOffset := azimuthStep / 2
 
-	if deadzone < 0 || zenithDeadzone < 0 ||
-		deadzone+zenithDeadzone >= math.Pi/2 {
-		return nil, fmt.Errorf(
-			"deadzone angles must be non-negative and sum to less than pi/2")
-	}
-
-	elevationStepCount := bits.Len64(2*uint64(sizeBytes)+1) - 1
-
-	if elevationStepCount > bits.UintSize-3 {
-		return nil, fmt.Errorf(
-			"--size-bytes is too large to index the resulting directions on this platform")
-	}
-
-	elevationStep := (math.Pi/2 - deadzone - zenithDeadzone) /
-		float64(elevationStepCount)
-
-	elevationOffset := deadzone + elevationStep/2
-
-	var directions []vector3
-
-	for zsIndex := range elevationStepCount {
-		elevationAngle := float64(zsIndex)*elevationStep +
-			elevationOffset
-
-		azimuthStepCount := 4 << zsIndex
-		azimuthStep := 2 * math.Pi / float64(azimuthStepCount)
-		azimuthOffset := azimuthStep / 2
-
-		for asIndex := range azimuthStepCount {
-			azimuthAngle := float64(asIndex)*azimuthStep +
-				azimuthOffset
-
-			directions = append(
-				directions,
-				sphericalToVector3(azimuthAngle, elevationAngle),
-			)
+	for zi := range nbStepsZenith {
+		zenithAngle := zenithOffset + float64(zi)*zenithStep
+		for ai := range nbStepsAzimuth {
+			azimuthAngle := azimuthOffset + float64(ai)*azimuthStep
+			directions = append(directions, sphericalToVector3(azimuthAngle, math.Pi/2-zenithAngle))
 		}
 	}
 
 	return directions, nil
+}
+
+func smallestPairFactors(n uint32) (g, p uint32) {
+	smallestSum := uint32(math.MaxUint32)
+	sqrt := uint32(math.Sqrt(float64(n)))
+
+	for i := uint32(1); i <= sqrt; i++ {
+		if n%i == 0 {
+			dividend := n / i
+			sum := i + dividend
+			if sum < smallestSum {
+				smallestSum = sum
+				p = i
+				g = dividend
+			}
+		}
+	}
+	return g, p
 }
 
 // sphericalToVector3 converts spherical angles into a Cartesian vector.
@@ -102,186 +87,134 @@ func writeDirections(w io.Writer, directions []vector3) error {
 	return writer.Flush()
 }
 
-// RenderViewshed renders a hemispherical viewshed using cell-based
-// rasterization.
-//
-// directions must contain obstruction results in the same order as
-// computeDirectionsVectors.
-//
-// true  = obstructed
-// false = visible
-//
-// size is the width and height of the resulting square image.
-//
-// deadzone excludes the area around the zenith.
-// zenithDeadzone excludes the area around the horizon.
-func RenderViewshed(
-	directions []bool,
-	size int,
-	deadzone float64,
-	zenithDeadzone float64,
-) (*image.RGBA, error) {
-	if size < 2 {
-		return nil, fmt.Errorf("size must be at least 2")
+func VisualizeViewshed(
+	filename string,
+	bits pgtype.Bits,
+	size uint32,
+	minimumAngleFromHorizon float64,
+	minimumAngleFromZenith float64,
+) error {
+	// Validate input.
+	if !bits.Valid {
+		return fmt.Errorf("viewshed bit string is NULL")
 	}
 
-	if math.IsNaN(deadzone) || math.IsInf(deadzone, 0) ||
-		math.IsNaN(zenithDeadzone) || math.IsInf(zenithDeadzone, 0) {
-		return nil, fmt.Errorf("deadzone angles must be finite")
+	if bits.Len <= 0 {
+		return fmt.Errorf("viewshed bit string must contain at least one bit")
 	}
 
-	if deadzone < 0 || zenithDeadzone < 0 ||
-		deadzone+zenithDeadzone >= math.Pi/2 {
-		return nil, fmt.Errorf(
-			"deadzone angles must be non-negative and sum to less than pi/2",
+	if size == 0 {
+		return fmt.Errorf("image size must be greater than zero")
+	}
+
+	if uint64(size) > uint64(^uint(0)>>1) {
+		return fmt.Errorf("image size exceeds maximum integer size")
+	}
+
+	expectedBytes := (int64(bits.Len) + 7) / 8
+	if int64(len(bits.Bytes)) != expectedBytes {
+		return fmt.Errorf(
+			"invalid bit string: expected %d bytes, got %d",
+			expectedBytes,
+			len(bits.Bytes),
 		)
 	}
 
-	// Recover the number of elevation bands.
-	//
-	// Total directions = 4 * (2^n - 1)
-	q := len(directions)/4 + 1
+	// Generate exactly one direction vector per bit.
+	directions, err := computeDirectionsVectors(
+		minimumAngleFromHorizon,
+		minimumAngleFromZenith,
+		uint32(bits.Len),
+	)
+	if err != nil {
+		return fmt.Errorf("compute direction vectors: %w", err)
+	}
 
-	if len(directions) == 0 ||
-		len(directions)%4 != 0 ||
-		q&(q-1) != 0 {
-		return nil, fmt.Errorf(
-			"invalid direction count: got %d",
+	if len(directions) != int(bits.Len) {
+		return fmt.Errorf(
+			"direction count mismatch: expected %d, got %d",
+			bits.Len,
 			len(directions),
 		)
 	}
 
-	elevationStepCount := bits.Len(uint(q)) - 1
+	// Create a square grayscale image.
+	img := image.NewGray(image.Rect(0, 0, int(size), int(size)))
 
-	elevationStep := (math.Pi/2 - deadzone - zenithDeadzone) /
-		float64(elevationStepCount)
+	center := float64(size-1) / 2
+	radius := float64(size) / 2
 
-	// Precompute the starting index of each elevation band.
-	bandOffsets := make([]int, elevationStepCount)
+	for y := 0; y < int(size); y++ {
+		for x := 0; x < int(size); x++ {
 
-	offset := 0
+			// Map the pixel onto the projected hemisphere.
+			// Image Y increases downwards, hence the inverted Y coordinate.
+			px := (float64(x) - center) / radius
+			py := (center - float64(y)) / radius
 
-	for band := 0; band < elevationStepCount; band++ {
-		bandOffsets[band] = offset
-		offset += 4 << band
-	}
+			// Distance from the center of the projected hemisphere.
+			radiusSquared := px*px + py*py
 
-	// Colors.
-	visibleColor := color.RGBA{
-		R: 65, G: 180, B: 110, A: 255,
-	}
-	obstructedColor := color.RGBA{
-		R: 210, G: 75, B: 65, A: 255,
-	}
-	deadzoneColor := color.RGBA{
-		R: 65, G: 65, B: 70, A: 255,
-	}
-	backgroundColor := color.RGBA{
-		R: 30, G: 30, B: 35, A: 255,
-	}
-
-	img := image.NewRGBA(image.Rect(0, 0, size, size))
-
-	cx := float64(size-1) / 2
-	cy := float64(size-1) / 2
-	radius := math.Min(cx, cy)
-
-	maxZenithAngle := math.Pi/2 - zenithDeadzone
-
-	// Rasterize the hemisphere.
-	//
-	// Each pixel is mapped back to spherical coordinates.
-	// Its angular coordinates identify exactly one cell.
-	for y := 0; y < size; y++ {
-		for x := 0; x < size; x++ {
-			dx := float64(x) - cx
-			dy := cy - float64(y)
-
-			// Radial distance from the zenith.
-			r := math.Hypot(dx, dy)
-
-			if r > radius {
-				img.SetRGBA(x, y, backgroundColor)
+			// Pixels outside the hemisphere remain black.
+			if radiusSquared > 1 {
 				continue
 			}
 
-			// Convert radial distance to zenith angle.
-			zenithAngle := (r / radius) * (math.Pi / 2)
+			// Orthographic projection onto the upper unit hemisphere.
+			pz := math.Sqrt(1 - radiusSquared)
 
-			// Outside the sampled hemisphere.
-			if zenithAngle < deadzone ||
-				zenithAngle >= maxZenithAngle {
-				img.SetRGBA(x, y, deadzoneColor)
-				continue
+			pixelDirection := vector3{
+				x: px,
+				y: py,
+				z: pz,
 			}
 
-			// Determine the elevation band.
-			band := int((zenithAngle - deadzone) / elevationStep)
+			// Find the sampled direction with the smallest angular distance.
+			closestIndex := 0
+			maxDotProduct := math.Inf(-1)
 
-			if band >= elevationStepCount {
-				band = elevationStepCount - 1
+			for i, direction := range directions {
+				dotProduct :=
+					pixelDirection.x*direction.x +
+						pixelDirection.y*direction.y +
+						pixelDirection.z*direction.z
+
+				if dotProduct > maxDotProduct {
+					maxDotProduct = dotProduct
+					closestIndex = i
+				}
 			}
 
-			// Recover azimuth.
-			//
-			// The Y coordinate is inverted because image
-			// coordinates increase downwards.
-			azimuth := math.Atan2(dy, dx)
+			// PostgreSQL bit strings are stored MSB-first.
+			// Bit 0 is the most significant bit of the first byte.
+			bitIndex := int32(closestIndex)
+			bitMask := byte(0x80 >> uint(bitIndex%8))
 
-			if azimuth < 0 {
-				azimuth += 2 * math.Pi
+			isVisible := bits.Bytes[bitIndex/8]&bitMask != 0
+
+			gray := uint8(255) // White for 0.
+			if isVisible {
+				gray = 128 // Gray for 1.
 			}
 
-			// Each elevation band has its own azimuth resolution.
-			azimuthCount := 4 << band
-			azimuthStep := 2 * math.Pi / float64(azimuthCount)
-
-			// Azimuth cell boundaries are multiples of azimuthStep.
-			// Samples themselves are located at cell centers.
-			azimuthIndex := int(azimuth / azimuthStep)
-
-			// Protect against floating-point rounding at 2*pi.
-			if azimuthIndex >= azimuthCount {
-				azimuthIndex = 0
-			}
-
-			// Find the corresponding boolean.
-			directionIndex := bandOffsets[band] + azimuthIndex
-
-			if directions[directionIndex] {
-				img.SetRGBA(x, y, obstructedColor)
-			} else {
-				img.SetRGBA(x, y, visibleColor)
-			}
+			img.SetGray(x, y, color.Gray{Y: gray})
 		}
 	}
 
-	return img, nil
-}
-
-// SaveViewshedPNG renders and saves a viewshed as PNG.
-func SaveViewshedPNG(
-	filename string,
-	directions []bool,
-	size int,
-	deadzone float64,
-	zenithDeadzone float64,
-) error {
-	img, err := RenderViewshed(
-		directions,
-		size,
-		deadzone,
-		zenithDeadzone,
-	)
-	if err != nil {
-		return err
-	}
-
+	// Encode and save as PNG.
 	file, err := os.Create(filename)
 	if err != nil {
-		return err
+		return fmt.Errorf("create image file: %w", err)
 	}
-	defer file.Close()
 
-	return png.Encode(file, img)
+	if err := png.Encode(file, img); err != nil {
+		_ = file.Close()
+		return fmt.Errorf("encode PNG: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("close image file: %w", err)
+	}
+
+	return nil
 }

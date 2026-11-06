@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"math"
+	"os"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -13,7 +14,19 @@ import (
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
+const viewshedSizeBits = 128
+const minimumAngleFromHorizon = math.Pi / 24
+const minimumAngleFromZenith = math.Pi / 12
+
 func Run(config GenerateViewshedsConfig) error {
+	if config.PrintDirections {
+		directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, 128)
+		if err != nil {
+			return err
+		}
+		return writeDirections(os.Stdout, directions)
+	}
+
 	slog.Info("Connecting to database")
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, config.Db.ConnectionString())
@@ -150,6 +163,7 @@ type GenerateViewshedsConfig struct {
 
 	MaximumWorkAreaSize float64
 	MaximumDistance     float64
+	PrintDirections     bool
 	VrtFilePath         string
 	CreateWorkAreas     bool
 }

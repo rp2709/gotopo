@@ -63,3 +63,6 @@ LIMIT 1;
 
 -- name: UpdateWorkArea :exec
 UPDATE work_area SET done = $1 WHERE num = $2;
+
+-- name: UpdateSamplePoint :exec
+UPDATE sample_point SET viewshed = $1;

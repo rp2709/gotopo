@@ -76,6 +76,7 @@ func main() {
 	flag.Float64Var(&generateViewshedsConfig.MaximumWorkAreaSize, "max-work-area-size", 10000, "maximum size of work areas")
 	flag.Float64Var(&generateViewshedsConfig.MaximumDistance, "max-distance", 40000, "maximum distance to explore from each sample point")
 	flag.BoolVar(&generateViewshedsConfig.CreateWorkAreas, "create-work-areas", false, "Create work areas")
+	flag.BoolVar(&generateViewshedsConfig.PrintDirections, "print-directions", false, "Print direction vectors to stdout")
 
 	flag.Parse()
 	slog.SetLogLoggerLevel(slog.Level(*verbosity))

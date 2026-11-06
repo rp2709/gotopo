@@ -6,7 +6,8 @@ CREATE TABLE sample_point
 (
     sid      SERIAL PRIMARY KEY,
     eid      INTEGER               NOT NULL REFERENCES edges (eid),
-    location geometry(Point, 2056) NOT NULL
+    location geometry(Point, 2056) NOT NULL,
+    viewshed bit(128)
 );
 
 CREATE INDEX sample_point_from_edge ON sample_point (eid); -- we will always JOIN with edges
@@ -18,6 +19,6 @@ DROP VIEW IF EXISTS sample_point_extent;
 CREATE VIEW sample_point_extent AS
 SELECT st_setsrid(
                st_extent(location),
-               st_srid(2056)
+               2056
        )::geometry(Polygon, 2056) AS extent
 FROM sample_point;
