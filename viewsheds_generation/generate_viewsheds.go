@@ -15,7 +15,7 @@ import (
 )
 
 const viewshedSizeBits = 128
-const minimumAngleFromHorizon = math.Pi / 24
+const minimumAngleFromHorizon = math.Pi / 12
 const minimumAngleFromZenith = math.Pi / 12
 
 func Run(config GenerateViewshedsConfig) error {
@@ -25,6 +25,10 @@ func Run(config GenerateViewshedsConfig) error {
 			return err
 		}
 		return writeDirections(os.Stdout, directions)
+	}
+
+	if config.VisualizeViewshed {
+		return visualizeViewsheds(config)
 	}
 
 	slog.Info("Connecting to database")
@@ -48,6 +52,37 @@ func Run(config GenerateViewshedsConfig) error {
 	return computeViewsheds(config, queries, ctx)
 }
 
+func visualizeViewsheds(config GenerateViewshedsConfig) error {
+	slog.Info("Opening VRT raster dataset")
+	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
+	if err != nil {
+		return err
+	}
+
+	directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, viewshedSizeBits)
+	if err != nil {
+		return err
+	}
+
+	point := *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{config.X, config.Y})
+
+	ds.LoadArea(
+		point.X()-config.MaximumDistance,
+		point.X()+config.MaximumDistance,
+		point.Y()-config.MaximumDistance,
+		point.Y()+config.MaximumDistance,
+	)
+
+	vsb := viewshed(ds, point, directions)
+	return VisualizeViewshed(
+		"viewshed.png",
+		SliceOfBoolToBits(vsb),
+		2000,
+		minimumAngleFromHorizon,
+		minimumAngleFromZenith,
+	)
+}
+
 func computeViewsheds(config GenerateViewshedsConfig, queries *gotopo.Queries, ctx context.Context) error {
 	slog.Info("Opening VRT raster dataset")
 	ds, err := vrt_reader.OpenDataset(config.VrtFilePath, 0)
@@ -55,7 +90,7 @@ func computeViewsheds(config GenerateViewshedsConfig, queries *gotopo.Queries, c
 		return err
 	}
 
-	directions, err := computeDirectionsVectors(0.0, 0.0, 16)
+	directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, viewshedSizeBits)
 	if err != nil {
 		return err
 	}
@@ -166,6 +201,9 @@ type GenerateViewshedsConfig struct {
 	PrintDirections     bool
 	VrtFilePath         string
 	CreateWorkAreas     bool
+
+	VisualizeViewshed bool
+	X, Y              float64
 }
 
 func NextDistance(x float64) float64 {

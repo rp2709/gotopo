@@ -78,6 +78,10 @@ func main() {
 	flag.BoolVar(&generateViewshedsConfig.CreateWorkAreas, "create-work-areas", false, "Create work areas")
 	flag.BoolVar(&generateViewshedsConfig.PrintDirections, "print-directions", false, "Print direction vectors to stdout")
 
+	flag.BoolVar(&generateViewshedsConfig.VisualizeViewshed, "visualize-viewshed", false, "Visualize viewshed at a set location")
+	flag.Float64Var(&generateViewshedsConfig.X, "X", 2531882.927, "x coordinate of test point")
+	flag.Float64Var(&generateViewshedsConfig.Y, "Y", 1184492.072, "y coordinate of test point")
+
 	flag.Parse()
 	slog.SetLogLoggerLevel(slog.Level(*verbosity))
 

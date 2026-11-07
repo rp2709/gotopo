@@ -163,6 +163,20 @@ func VisualizeViewshed(
 			// Orthographic projection onto the upper unit hemisphere.
 			pz := math.Sqrt(1 - radiusSquared)
 
+			// Minimum angle from horizon: the outer circular band is always obstructed.
+			angleFromHorizon := math.Asin(pz)
+			if angleFromHorizon < minimumAngleFromHorizon {
+				img.SetGray(x, y, color.Gray{Y: 75})
+				continue
+			}
+
+			// Minimum angle from zenith: the central disk is always visible.
+			zenithAngle := math.Acos(pz)
+			if zenithAngle < minimumAngleFromZenith {
+				img.SetGray(x, y, color.Gray{Y: 255})
+				continue
+			}
+
 			pixelDirection := vector3{
 				x: px,
 				y: py,
@@ -192,7 +206,7 @@ func VisualizeViewshed(
 
 			isVisible := bits.Bytes[bitIndex/8]&bitMask != 0
 
-			gray := uint8(255) // White for 0.
+			gray := uint8(240) // White for 0.
 			if isVisible {
 				gray = 128 // Gray for 1.
 			}
@@ -217,4 +231,20 @@ func VisualizeViewshed(
 	}
 
 	return nil
+}
+
+func SliceOfBoolToBits(bools []bool) pgtype.Bits {
+	bits := pgtype.Bits{}
+
+	bits.Len = int32(len(bools))
+	bits.Valid = true
+	bits.Bytes = make([]byte, (int(bits.Len)+7)/8)
+
+	for i, b := range bools {
+		if b {
+			bits.Bytes[i/8] |= 1 << uint(7-i%8)
+		}
+	}
+
+	return bits
 }
