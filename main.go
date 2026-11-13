@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
-	"math"
 	"os"
 
 	"github.com/rp2709/gotopo/gotopo"
@@ -46,6 +45,8 @@ func main() {
 		for name, command := range CommandFromName {
 			fmt.Fprintf(os.Stderr, "  - %s : %s\n", name, CommandDescription[command])
 		}
+		fmt.Fprintln(os.Stderr, "Only general options are shown. To view options specific to a command, use :\n", "gotopo <command> --help")
+		fmt.Fprintln(os.Stderr, "Every subcommand follows the same pattern")
 		fmt.Fprintln(os.Stderr, "Options:")
 		flag.PrintDefaults()
 	}
@@ -59,28 +60,6 @@ func main() {
 	flag.StringVar(&dbConfig.Dbpwd, "dbpassword", os.Getenv("DBPASSWORD"), "Database password")
 
 	verbosity := flag.Int("verbosity", int(slog.LevelInfo), "Logging level. 0 -> info, -4 -> debug")
-
-	// graph-construction specific flags
-	graphConstructionConfig := graph_construction.GraphConstructionConfig{Db: &dbConfig}
-	flag.Int64Var(&graphConstructionConfig.ExplorationLimit, "exploration-limit", math.MaxInt64, "Limits the exploration of the graph to a set amount of vertices")
-	flag.Float64Var(&graphConstructionConfig.StartX, "startingX", 2540215.68, "x coordinate of starting point for graph exploration")
-	flag.Float64Var(&graphConstructionConfig.StartY, "startingY", 1181115.23, "y coordinate of starting point for graph exploration")
-
-	// sample edges flags
-	sampleEdgesConfig := sample_edges.SampleEdgesConfig{Db: &dbConfig}
-	flag.Float64Var(&sampleEdgesConfig.SampleInterval, "sample-interval", 10.0, "distance between every sample point in meters")
-
-	// viewshed-generation specific flags
-	generateViewshedsConfig := viewsheds_generation.GenerateViewshedsConfig{Db: &dbConfig}
-	flag.StringVar(&generateViewshedsConfig.VrtFilePath, "vrt", "", "Path to .vrt file indexing the surface model's tiles")
-	flag.Float64Var(&generateViewshedsConfig.MaximumWorkAreaSize, "max-work-area-size", 10000, "maximum size of work areas")
-	flag.Float64Var(&generateViewshedsConfig.MaximumDistance, "max-distance", 40000, "maximum distance to explore from each sample point")
-	flag.BoolVar(&generateViewshedsConfig.CreateWorkAreas, "create-work-areas", false, "Create work areas")
-	flag.BoolVar(&generateViewshedsConfig.PrintDirections, "print-directions", false, "Print direction vectors to stdout")
-
-	flag.BoolVar(&generateViewshedsConfig.VisualizeViewshed, "visualize-viewshed", false, "Visualize viewshed at a set location")
-	flag.Float64Var(&generateViewshedsConfig.X, "X", 2531882.927, "x coordinate of test point")
-	flag.Float64Var(&generateViewshedsConfig.Y, "Y", 1184492.072, "y coordinate of test point")
 
 	flag.Parse()
 	slog.SetLogLoggerLevel(slog.Level(*verbosity))
@@ -96,14 +75,16 @@ func main() {
 		os.Exit(2)
 	}
 
+	commandArgs := flag.Args()[1:]
+
 	var err error
 	switch command {
 	case CommandConstructGraph:
-		err = graph_construction.Run(graphConstructionConfig)
+		err = graph_construction.Run(dbConfig, commandArgs)
 	case CommandSampleEdges:
-		err = sample_edges.Run(sampleEdgesConfig)
+		err = sample_edges.Run(dbConfig, commandArgs)
 	case CommandGenerateViewsheds:
-		err = viewsheds_generation.Run(generateViewshedsConfig)
+		err = viewsheds_generation.Run(dbConfig, commandArgs)
 	}
 	if err != nil {
 		slog.Error(fmt.Sprintf("command %s failed", CommandToName[command]), "error", err)

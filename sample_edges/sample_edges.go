@@ -2,6 +2,7 @@ package sample_edges
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"math"
 
@@ -12,10 +13,21 @@ import (
 	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
-func Run(config SampleEdgesConfig) error {
+func Run(dbConfig gotopo.DatabaseConfig, args []string) error {
+
+	// sample edges flags
+	var sampleEdgesConfig SampleEdgesConfig
+	sampleEdgesFlags := flag.NewFlagSet("sample-edges", flag.ExitOnError)
+	sampleEdgesFlags.Float64Var(&sampleEdgesConfig.SampleInterval, "sample-interval", 20.0, "distance between every sample point in meters")
+
+	err := sampleEdgesFlags.Parse(args)
+	if err != nil {
+		return err
+	}
+
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, config.Db.ConnectionString())
+	conn, err := pgx.Connect(ctx, dbConfig.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -41,7 +53,7 @@ func Run(config SampleEdgesConfig) error {
 	slog.Info("Placing sample points")
 	// run along edges and place sample points every sampleInterval
 	for _, edge := range edges {
-		distanceSinceLastSample := config.SampleInterval / 2 // With a vertex between edges and an interval of 4: s--x--s and not s----x----s gives a distance of 4 units between s
+		distanceSinceLastSample := sampleEdgesConfig.SampleInterval / 2 // With a vertex between edges and an interval of 4: s--x--s and not s----x----s gives a distance of 4 units between s
 		coords := edge.Shape.Coords()
 		for i := range len(coords) - 1 {
 			dx := coords[i+1].X() - coords[i].X()
@@ -49,8 +61,8 @@ func Run(config SampleEdgesConfig) error {
 			segmentLength := math.Sqrt(dx*dx + dy*dy)
 			distanceSinceLastSample += segmentLength
 
-			for distanceSinceLastSample >= config.SampleInterval {
-				distanceSinceLastSample -= config.SampleInterval
+			for distanceSinceLastSample >= sampleEdgesConfig.SampleInterval {
+				distanceSinceLastSample -= sampleEdgesConfig.SampleInterval
 				distanceFromPointToSample := segmentLength - distanceSinceLastSample
 				spX := coords[i].X() + dx/segmentLength*distanceFromPointToSample
 				spY := coords[i].Y() + dy/segmentLength*distanceFromPointToSample
@@ -80,6 +92,5 @@ func Run(config SampleEdgesConfig) error {
 }
 
 type SampleEdgesConfig struct {
-	Db             *gotopo.DatabaseConfig
 	SampleInterval float64
 }

@@ -2,6 +2,7 @@ package viewsheds_generation
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"math"
 	"os"
@@ -18,8 +19,27 @@ const viewshedSizeBits = 128
 const minimumAngleFromHorizon = math.Pi / 12
 const minimumAngleFromZenith = math.Pi / 12
 
-func Run(config GenerateViewshedsConfig) error {
-	if config.PrintDirections {
+func Run(config gotopo.DatabaseConfig, args []string) error {
+
+	// viewshed-generation specific flags
+	var generateViewshedsConfig GenerateViewshedsConfig
+	generateViewshedsFlags := flag.NewFlagSet("generate-viewsheds", flag.ExitOnError)
+	generateViewshedsFlags.StringVar(&generateViewshedsConfig.VrtFilePath, "vrt", "", "Path to .vrt file indexing the surface model's tiles")
+	generateViewshedsFlags.Float64Var(&generateViewshedsConfig.MaximumWorkAreaSize, "max-work-area-size", 10000, "maximum size of work areas")
+	generateViewshedsFlags.Float64Var(&generateViewshedsConfig.MaximumDistance, "max-distance", 40000, "maximum distance to explore from each sample point")
+	generateViewshedsFlags.BoolVar(&generateViewshedsConfig.CreateWorkAreas, "create-work-areas", false, "Create work areas")
+	generateViewshedsFlags.BoolVar(&generateViewshedsConfig.PrintDirections, "print-directions", false, "Print direction vectors to stdout")
+
+	generateViewshedsFlags.BoolVar(&generateViewshedsConfig.VisualizeViewshed, "visualize-viewshed", false, "Visualize viewshed at a set location")
+	generateViewshedsFlags.Float64Var(&generateViewshedsConfig.X, "X", 2531882.927, "x coordinate of test point")
+	generateViewshedsFlags.Float64Var(&generateViewshedsConfig.Y, "Y", 1184492.072, "y coordinate of test point")
+
+	err := generateViewshedsFlags.Parse(args)
+	if err != nil {
+		return err
+	}
+
+	if generateViewshedsConfig.PrintDirections {
 		directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, 128)
 		if err != nil {
 			return err
@@ -27,13 +47,13 @@ func Run(config GenerateViewshedsConfig) error {
 		return writeDirections(os.Stdout, directions)
 	}
 
-	if config.VisualizeViewshed {
-		return visualizeViewsheds(config)
+	if generateViewshedsConfig.VisualizeViewshed {
+		return visualizeViewsheds(generateViewshedsConfig)
 	}
 
 	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, config.Db.ConnectionString())
+	conn, err := pgx.Connect(ctx, config.ConnectionString())
 	if err != nil {
 		return err
 	}
@@ -46,10 +66,10 @@ func Run(config GenerateViewshedsConfig) error {
 
 	queries := gotopo.New(conn)
 
-	if config.CreateWorkAreas {
-		return createWorkAreas(config, queries, ctx)
+	if generateViewshedsConfig.CreateWorkAreas {
+		return createWorkAreas(generateViewshedsConfig, queries, ctx)
 	}
-	return computeViewsheds(config, queries, ctx)
+	return computeViewsheds(generateViewshedsConfig, queries, ctx)
 }
 
 func visualizeViewsheds(config GenerateViewshedsConfig) error {
@@ -194,8 +214,6 @@ func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vecto
 }
 
 type GenerateViewshedsConfig struct {
-	Db *gotopo.DatabaseConfig
-
 	MaximumWorkAreaSize float64
 	MaximumDistance     float64
 	PrintDirections     bool
