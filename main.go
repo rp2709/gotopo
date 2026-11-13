@@ -12,44 +12,42 @@ import (
 	"github.com/rp2709/gotopo/viewsheds_generation"
 )
 
-type Command int
+type command int
 
 const (
-	CommandConstructGraph Command = iota
-	CommandSampleEdges
-	CommandGenerateViewsheds
+	commandConstructGraph command = iota
+	commandSampleEdges
+	viewsheds
 )
 
-var CommandFromName = map[string]Command{
-	"construct-graph":    CommandConstructGraph,
-	"sample-edges":       CommandSampleEdges,
-	"generate-viewsheds": CommandGenerateViewsheds,
+var commandFromName = map[string]command{
+	"construct-graph": commandConstructGraph,
+	"sample-edges":    commandSampleEdges,
+	"viewsheds":       viewsheds,
 }
 
-var CommandToName = map[Command]string{
-	CommandConstructGraph:    "construct-graph",
-	CommandSampleEdges:       "sample-edges",
-	CommandGenerateViewsheds: "generate-viewsheds",
+var commandToName = map[command]string{
+	commandConstructGraph: "construct-graph",
+	commandSampleEdges:    "sample-edges",
+	viewsheds:             "viewsheds",
 }
 
-var CommandDescription = map[Command]string{
-	CommandConstructGraph:    "Construct complete, oriented graph from isolated road polylines",
-	CommandSampleEdges:       "Sample each edge of the graph at a fixed interval",
-	CommandGenerateViewsheds: "Generate a hemispherical viewshed of arbitrary precision every sample point using a digital surface model",
+var commandDescription = map[command]string{
+	commandConstructGraph: "Construct complete, oriented graph from isolated road polylines",
+	commandSampleEdges:    "Sample each edge of the graph at a fixed interval",
+	viewsheds:             "Perform actions related to viewsheds, see \"gotopo viewsheds --help\".",
+}
+
+type commandFunction func(config gotopo.DatabaseConfig, args []string) error
+
+var commandEntryPoint = map[command]commandFunction{
+	commandConstructGraph: graph_construction.Run,
+	commandSampleEdges:    sample_edges.Run,
+	viewsheds:             viewsheds_generation.Run,
 }
 
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: gotopo [options] <command>")
-		fmt.Fprintln(os.Stderr, "Available commands:")
-		for name, command := range CommandFromName {
-			fmt.Fprintf(os.Stderr, "  - %s : %s\n", name, CommandDescription[command])
-		}
-		fmt.Fprintln(os.Stderr, "Only general options are shown. To view options specific to a command, use :\n", "gotopo <command> --help")
-		fmt.Fprintln(os.Stderr, "Every subcommand follows the same pattern")
-		fmt.Fprintln(os.Stderr, "Options:")
-		flag.PrintDefaults()
-	}
+	flag.Usage = usage
 
 	// Database configuration, shared by all commands
 	var dbConfig gotopo.DatabaseConfig
@@ -69,7 +67,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-	command, ok := CommandFromName[flag.Arg(0)]
+	cmd, ok := commandFromName[flag.Arg(0)]
 	if !ok {
 		flag.Usage()
 		os.Exit(2)
@@ -77,17 +75,21 @@ func main() {
 
 	commandArgs := flag.Args()[1:]
 
-	var err error
-	switch command {
-	case CommandConstructGraph:
-		err = graph_construction.Run(dbConfig, commandArgs)
-	case CommandSampleEdges:
-		err = sample_edges.Run(dbConfig, commandArgs)
-	case CommandGenerateViewsheds:
-		err = viewsheds_generation.Run(dbConfig, commandArgs)
-	}
+	err := commandEntryPoint[cmd](dbConfig, commandArgs)
 	if err != nil {
-		slog.Error(fmt.Sprintf("command %s failed", CommandToName[command]), "error", err)
-		os.Exit(3 + int(command))
+		slog.Error("Gotopo failed", "command", commandToName[cmd], "error", err)
+		os.Exit(3 + int(cmd))
 	}
+}
+
+func usage() {
+	fmt.Fprintln(os.Stderr, "Usage: gotopo [options] <command>")
+	fmt.Fprintln(os.Stderr, "Available commands:")
+	for name, cmd := range commandFromName {
+		fmt.Fprintf(os.Stderr, "  - %s : %s\n", name, commandDescription[cmd])
+	}
+	fmt.Fprintln(os.Stderr, "Only general options are shown. To view options specific to a command, use :\n", "gotopo <command> --help")
+	fmt.Fprintln(os.Stderr, "Every subcommand follows the same pattern")
+	fmt.Fprintln(os.Stderr, "Options:")
+	flag.PrintDefaults()
 }

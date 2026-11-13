@@ -9,9 +9,6 @@ import (
 
 	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/quadtree"
-
-	"github.com/jackc/pgx/v5"
-	pgxgeom "github.com/twpayne/pgx-geom"
 )
 
 func Run(dbConfig gotopo.DatabaseConfig, args []string) error {
@@ -28,20 +25,12 @@ func Run(dbConfig gotopo.DatabaseConfig, args []string) error {
 		return err
 	}
 
-	slog.Info("Connecting to database")
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dbConfig.ConnectionString())
+	queries, conn, err := dbConfig.Connect(ctx)
 	if err != nil {
 		return err
 	}
-	defer conn.Close(ctx)
-
-	err = pgxgeom.Register(ctx, conn)
-	if err != nil {
-		return err
-	}
-
-	queries := gotopo.New(conn)
+	defer conn.Close(context.Background())
 
 	slog.Info("Loading all roads")
 	roadsBuffer, grErr := queries.GetRoads(ctx)

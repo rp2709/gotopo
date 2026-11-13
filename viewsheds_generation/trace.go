@@ -27,3 +27,15 @@ func obstructed(ds *vrt_reader.RasterDataset, source geom.Point, direction vecto
 	}
 	return false
 }
+
+func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vector3) []bool {
+	v := make([]bool, len(directions))
+	for i, d := range directions {
+		v[i] = obstructed(ds, point, d, 40000, 4500, nextDistance)
+	}
+	return v
+}
+
+func nextDistance(x float64) float64 {
+	return 1.08*x + 1.5
+}
