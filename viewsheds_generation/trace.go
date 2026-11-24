@@ -28,10 +28,10 @@ func obstructed(ds *vrt_reader.RasterDataset, source geom.Point, direction vecto
 	return false
 }
 
-func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, directions []vector3) []bool {
-	v := make([]bool, len(directions))
-	for i, d := range directions {
-		v[i] = obstructed(ds, point, d, 40000, 4500, nextDistance)
+func viewshed(ds *vrt_reader.RasterDataset, point geom.Point, maxDistance float64, maxAltitude float64, method PackingMethod) sliceRepresentation {
+	v := make(sliceRepresentation, len(method.Directions()))
+	for i, d := range method.Directions() {
+		v[i] = obstructed(ds, point, d, maxDistance, maxAltitude, nextDistance)
 	}
 	return v
 }

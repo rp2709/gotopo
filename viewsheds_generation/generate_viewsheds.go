@@ -13,6 +13,8 @@ const viewshedSizeBits = 128
 const minimumAngleFromHorizon = math.Pi / 12
 const minimumAngleFromZenith = math.Pi / 12
 
+var packingMethod PackingMethod = NewEvenAnglePacking(viewshedSizeBits, minimumAngleFromZenith, minimumAngleFromHorizon)
+
 type command int
 
 const (
@@ -52,6 +54,7 @@ func Run(databaseConfig gotopo.DatabaseConfig, args []string) error {
 	flags.Usage = usage(flags)
 	flags.StringVar(&viewshedConfig.VrtFilePath, "vrt", "", "Path to .vrt file indexing the surface model's tiles")
 	flags.Float64Var(&viewshedConfig.MaxDistance, "max-distance", 40000, "maximum distance to explore from each sample point")
+	flags.Float64Var(&viewshedConfig.MaxAltitude, "max-altitude", 4600, "maximum altitude the terrain may reach")
 
 	err := flags.Parse(args)
 	if err != nil {
@@ -88,4 +91,5 @@ func usage(viewshedsFlags *flag.FlagSet) func() {
 type viewshedsConfigT struct {
 	VrtFilePath string
 	MaxDistance float64
+	MaxAltitude float64
 }

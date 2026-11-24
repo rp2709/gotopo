@@ -17,17 +17,13 @@ func doVisualizeViewsheds(_ gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 	flags := flag.NewFlagSet("visualize", flag.ExitOnError)
 	x := flags.Float64("X", 2531882.927, "x coordinate of test point")
 	y := flags.Float64("Y", 1184492.072, "y coordinate of test point")
+	size := flags.Int("size", 800, "size of the image in pixels")
 	err := flags.Parse(args)
 	if err != nil {
 		return err
 	}
 
 	ds, err := vrt_reader.OpenDataset(viewshedConfig.VrtFilePath, 0)
-	if err != nil {
-		return err
-	}
-
-	directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, viewshedSizeBits)
 	if err != nil {
 		return err
 	}
@@ -41,22 +37,17 @@ func doVisualizeViewsheds(_ gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 		point.Y()+viewshedConfig.MaxDistance,
 	)
 
-	vsb := viewshed(ds, point, directions)
+	vsb := viewshed(ds, point, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
 	return VisualizeViewshed(
 		"viewshed.png",
-		SliceOfBoolToBits(vsb),
-		2000,
-		minimumAngleFromHorizon,
-		minimumAngleFromZenith,
+		vsb.toBits(),
+		*size,
+		packingMethod,
 	)
 }
 
 func doPrintDirections(_ gotopo.DatabaseConfig, _ viewshedsConfigT, _ []string) error {
-	directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, viewshedSizeBits)
-	if err != nil {
-		return err
-	}
-	return writeDirections(os.Stdout, directions)
+	return writeDirections(os.Stdout, packingMethod.Directions())
 }
 
 func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfigT, _ []string) error {
@@ -68,11 +59,6 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 	defer conn.Close(context.Background())
 
 	ds, err := vrt_reader.OpenDataset(viewshedConfig.VrtFilePath, 0)
-	if err != nil {
-		return err
-	}
-
-	directions, err := computeDirectionsVectors(minimumAngleFromHorizon, minimumAngleFromZenith, viewshedSizeBits)
 	if err != nil {
 		return err
 	}
@@ -94,7 +80,7 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 
 		slog.Info("Calculating viewsheds", "samples", len(points))
 		for _, point := range points {
-			_ = viewshed(ds, *point.Location, directions)
+			_ = viewshed(ds, *point.Location, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
 		}
 
 		slog.Info("Marking area as done", "Area", workArea.Num)

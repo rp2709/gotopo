@@ -17,50 +17,6 @@ type vector3 struct {
 	x, y, z float64
 }
 
-// computeDirectionsVectors distributes direction vectors over a hemisphere.
-func computeDirectionsVectors(
-	minimumAngleFromHorizon float64,
-	minimumAngleFromZenith float64,
-	sizeBits uint32,
-) ([]vector3, error) {
-	directions := make([]vector3, 0, sizeBits)
-
-	nbStepsAzimuth, nbStepsZenith := smallestPairFactors(sizeBits)
-	zenithAngleToCover := math.Pi/2 - minimumAngleFromZenith - minimumAngleFromHorizon
-	zenithStep := zenithAngleToCover / float64(nbStepsZenith)
-	azimuthStep := math.Pi * 2 / float64(nbStepsAzimuth)
-	zenithOffset := minimumAngleFromHorizon + zenithStep/2
-	azimuthOffset := azimuthStep / 2
-
-	for zi := range nbStepsZenith {
-		zenithAngle := zenithOffset + float64(zi)*zenithStep
-		for ai := range nbStepsAzimuth {
-			azimuthAngle := azimuthOffset + float64(ai)*azimuthStep
-			directions = append(directions, sphericalToVector3(azimuthAngle, math.Pi/2-zenithAngle))
-		}
-	}
-
-	return directions, nil
-}
-
-func smallestPairFactors(n uint32) (g, p uint32) {
-	smallestSum := uint32(math.MaxUint32)
-	sqrt := uint32(math.Sqrt(float64(n)))
-
-	for i := uint32(1); i <= sqrt; i++ {
-		if n%i == 0 {
-			dividend := n / i
-			sum := i + dividend
-			if sum < smallestSum {
-				smallestSum = sum
-				p = i
-				g = dividend
-			}
-		}
-	}
-	return g, p
-}
-
 // sphericalToVector3 converts spherical angles into a Cartesian vector.
 // Both angles are measured in radians.
 func sphericalToVector3(azimuth, zenithAngle float64) vector3 {
@@ -90,9 +46,8 @@ func writeDirections(w io.Writer, directions []vector3) error {
 func VisualizeViewshed(
 	filename string,
 	bits pgtype.Bits,
-	size uint32,
-	minimumAngleFromHorizon float64,
-	minimumAngleFromZenith float64,
+	size int,
+	method PackingMethod,
 ) error {
 	// Validate input.
 	if !bits.Valid {
@@ -107,34 +62,11 @@ func VisualizeViewshed(
 		return fmt.Errorf("image size must be greater than zero")
 	}
 
-	if uint64(size) > uint64(^uint(0)>>1) {
-		return fmt.Errorf("image size exceeds maximum integer size")
-	}
-
-	expectedBytes := (int64(bits.Len) + 7) / 8
-	if int64(len(bits.Bytes)) != expectedBytes {
-		return fmt.Errorf(
-			"invalid bit string: expected %d bytes, got %d",
-			expectedBytes,
-			len(bits.Bytes),
-		)
-	}
-
-	// Generate exactly one direction vector per bit.
-	directions, err := computeDirectionsVectors(
-		minimumAngleFromHorizon,
-		minimumAngleFromZenith,
-		uint32(bits.Len),
-	)
-	if err != nil {
-		return fmt.Errorf("compute direction vectors: %w", err)
-	}
-
-	if len(directions) != int(bits.Len) {
+	if len(method.Directions()) != int(bits.Len) {
 		return fmt.Errorf(
 			"direction count mismatch: expected %d, got %d",
 			bits.Len,
-			len(directions),
+			len(method.Directions()),
 		)
 	}
 
@@ -187,7 +119,7 @@ func VisualizeViewshed(
 			closestIndex := 0
 			maxDotProduct := math.Inf(-1)
 
-			for i, direction := range directions {
+			for i, direction := range method.Directions() {
 				dotProduct :=
 					pixelDirection.x*direction.x +
 						pixelDirection.y*direction.y +
@@ -231,20 +163,4 @@ func VisualizeViewshed(
 	}
 
 	return nil
-}
-
-func SliceOfBoolToBits(bools []bool) pgtype.Bits {
-	bits := pgtype.Bits{}
-
-	bits.Len = int32(len(bools))
-	bits.Valid = true
-	bits.Bytes = make([]byte, (int(bits.Len)+7)/8)
-
-	for i, b := range bools {
-		if b {
-			bits.Bytes[i/8] |= 1 << uint(7-i%8)
-		}
-	}
-
-	return bits
 }
