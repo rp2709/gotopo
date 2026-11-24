@@ -14,6 +14,9 @@ CREATE INDEX sample_point_from_edge ON sample_point (eid); -- we will always JOI
 CREATE INDEX sample_point_gist ON sample_point USING gist (location);
 -- we need to query sample points by area to pre-compute viewsheds
 
+-- the graph is assembled from flat rows in Go, so no aggregate view is needed
+DROP MATERIALIZED VIEW IF EXISTS vertex_agg;
+
 -- this view exists only to allow precise sqlc type override
 DROP VIEW IF EXISTS sample_point_extent;
 CREATE VIEW sample_point_extent AS
@@ -24,28 +27,20 @@ SELECT st_setsrid(
 FROM sample_point;
 
 -- view to render edges with viewshed array
-DROP VIEW IF EXISTS edge_agg;
-CREATE VIEW edge_agg AS
+-- LEFT JOIN keeps short edges that have no sample points; FILTER avoids a
+-- spurious [NULL] element in their viewsheds array.
+DROP MATERIALIZED VIEW IF EXISTS edge_agg;
+CREATE MATERIALIZED VIEW edge_agg AS
 SELECT
     e.eid AS edge_id,
     e.start_vid AS start_vid,
     e.end_vid AS neighbour_id,
     st_length(e.shape) AS length,
+    e.shape AS shape,
     s.objektart AS road_type,
     s.belagsart AS surface_type,
-    ARRAY_AGG(sp.viewshed) AS viewsheds
+    COALESCE(ARRAY_AGG(sp.viewshed) FILTER (WHERE sp.sid IS NOT NULL), '{}'::bit[]) AS viewsheds
 FROM edges e
 INNER JOIN tlm_strasse s ON e.gid = s.objectid
-INNER JOIN sample_point sp ON sp.eid = e.eid
+LEFT JOIN sample_point sp ON sp.eid = e.eid
 GROUP BY (e.eid,e.start_vid,e.end_vid,e.shape,s.objektart,s.belagsart);
-
--- view to render vertices with their edges as lists
-DROP MATERIALIZED VIEW IF EXISTS vertex_agg;
-CREATE MATERIALIZED VIEW vertex_agg AS
-SELECT
-    v.vid AS vertex_id,
-    v.location AS location,
-    ARRAY_AGG(e) AS edges
-FROM vertices v
-INNER JOIN edge_agg e ON e.start_vid = v.vid
-GROUP BY v.vid;

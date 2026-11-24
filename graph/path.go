@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/rp2709/gotopo/gotopo"
@@ -26,6 +27,7 @@ func Run(db gotopo.DatabaseConfig, _ []string) error {
 	if err != nil {
 		return err
 	}
+	slog.Info("found starting vertex", "vertex_id", startVertex)
 
 	endVertex, err := queries.GetClosestVertexWithin(ctx, gotopo.GetClosestVertexWithinParams{
 		Point:       endPoint,
@@ -34,23 +36,49 @@ func Run(db gotopo.DatabaseConfig, _ []string) error {
 	if err != nil {
 		return err
 	}
+	slog.Info("found ending vertex", "vertex_id", endVertex)
 
-	margin := 100.0
-	pathArea := geom.NewBounds(geom.XY).SetCoords(
-		geom.Coord{min(startPoint.X(), endPoint.X()) - margin, min(startPoint.Y(), endPoint.Y()) - margin},
-		geom.Coord{max(startPoint.X(), endPoint.X()) + margin, max(startPoint.Y(), endPoint.Y()) + margin},
-	).Polygon().SetSRID(2056)
+	margin := 10000.0
 
-	graph, err := queries.GetGraphWithin(ctx, pathArea)
+	minX := min(startPoint.X(), endPoint.X()) - margin
+	minY := min(startPoint.Y(), endPoint.Y()) - margin
+	maxX := max(startPoint.X(), endPoint.X()) + margin
+	maxY := max(startPoint.Y(), endPoint.Y()) + margin
+
+	pathArea := geom.NewPolygon(geom.XY).SetSRID(2056).MustSetCoords([][]geom.Coord{{
+		{minX, minY},
+		{maxX, minY},
+		{maxX, maxY},
+		{minX, maxY},
+		{minX, minY}, // ring must be closed
+	}})
+
+	slog.Debug("Start loading graph")
+	rows, err := queries.GetGraphWithin(ctx, pathArea)
+	if err != nil {
+		return err
+	}
+	slog.Info("loaded graph", "rows", len(rows))
+
+	g := FromRows(rows)
+	slog.Info("starting to compute shortest path")
+	path, err := ShortestPath(g, startVertex, endVertex, time.Now(), DefaultMetrics, DefaultEdgeDuration)
 	if err != nil {
 		return err
 	}
 
-	path, err := ShortestPath(graph, startVertex, endVertex, time.Now(), DefaultMetrics, DefaultEdgeDuration)
+	slog.Info("shortest path found", "length", len(path))
+	pathMultiLineString := geom.NewMultiLineString(geom.XYZ).SetSRID(2056)
+	for _, e := range path {
+		err = pathMultiLineString.Push(e.Shape)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = queries.AddPath(ctx, pathMultiLineString)
 	if err != nil {
 		return err
 	}
-
-	println(path)
 	return nil
 }

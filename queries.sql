@@ -69,11 +69,19 @@ UPDATE sample_point SET viewshed = $1;
 
 -- name: GetGraphWithin :many
 SELECT
-    v.vertex_id,
-    v.edges
-FROM vertex_agg v
-WHERE st_within(v.location,$1)
-ORDER BY v.vertex_id;
+    v.vid AS vertex_id,
+    e.edge_id,
+    e.start_vid,
+    e.neighbour_id,
+    e.length,
+    e.road_type,
+    e.surface_type,
+    e.viewsheds,
+    e.shape
+FROM vertices v
+INNER JOIN edge_agg e ON e.start_vid = v.vid
+WHERE st_within(v.location, $1)
+ORDER BY v.vid, e.edge_id;
 
 -- name: GetClosestVertexWithin :one
 SELECT vid
@@ -81,3 +89,7 @@ FROM vertices
 WHERE st_dwithin(location, sqlc.arg(point)::geometry, sqlc.arg(max_distance)::float8)
 ORDER BY location <-> sqlc.arg(point)::geometry
 LIMIT 1;
+
+-- name: AddPath :exec
+INSERT INTO paths (shape)
+VALUES(st_linemerge($1));

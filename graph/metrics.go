@@ -18,8 +18,8 @@ var roadTypeScores = map[schema.ObjectType]float64{
 	schema.OBJECT_TYPE_ROUTE_10M:                   0.6,
 	schema.OBJECT_TYPE_ROUTE_8M:                    0.5,
 	schema.OBJECT_TYPE_ROUTE_6M:                    0.4,
-	schema.OBJECT_TYPE_ROUTE_4M:                    0.3,
-	schema.OBJECT_TYPE_ROUTE_3M:                    0.05,
+	schema.OBJECT_TYPE_ROUTE_4M:                    0.2,
+	schema.OBJECT_TYPE_ROUTE_3M:                    0.0,
 	schema.OBJECT_TYPE_PLACE:                       0.0,
 	schema.OBJECT_TYPE_TRAIN_AUTOBUS:               1.0,
 	schema.OBJECT_TYPE_BAC:                         0.5,
@@ -56,17 +56,17 @@ var DefaultMetrics = Metrics{
 	Metric{
 		name:     "distance",
 		evaluate: distanceMetric,
-		weight:   0.5,
+		weight:   0.33,
 	},
 	Metric{
 		name:     "road type",
 		evaluate: roadTypeMetric,
-		weight:   0.25,
+		weight:   0.33,
 	},
 	Metric{
 		name:     "surface type",
 		evaluate: surfaceTypeMetric,
-		weight:   0.25,
+		weight:   0.33,
 	},
 }
 

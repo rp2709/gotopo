@@ -88,11 +88,6 @@ sql:
               type: "pgtype.Bits"
               slice: true
 
-          - column: "vertex_agg.edges"
-            go_type:
-              type: "EdgeAgg"
-              slice: true
-
           - column: "edge_agg.road_type"
             go_type:
               import: "github.com/rp2709/gotopo/schema"
@@ -104,3 +99,17 @@ sql:
               import: "github.com/rp2709/gotopo/schema"
               package: "schema"
               type: "SurfaceType"
+
+          - column: "edge_agg.shape"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "LineString"
+              pointer: true
+
+          - column: "paths.shape"
+            go_type:
+              import: "github.com/twpayne/go-geom"
+              package: "geom"
+              type: "MultiLineString"
+              pointer: true

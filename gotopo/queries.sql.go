@@ -13,6 +13,16 @@ import (
 	geom "github.com/twpayne/go-geom"
 )
 
+const addPath = `-- name: AddPath :exec
+INSERT INTO paths (shape)
+VALUES(st_linemerge($1))
+`
+
+func (q *Queries) AddPath(ctx context.Context, stLinemerge interface{}) error {
+	_, err := q.db.Exec(ctx, addPath, stLinemerge)
+	return err
+}
+
 const clearWorkAreas = `-- name: ClearWorkAreas :exec
 DELETE FROM work_area
 `
@@ -95,16 +105,31 @@ func (q *Queries) GetClosestVertexWithin(ctx context.Context, arg GetClosestVert
 
 const getGraphWithin = `-- name: GetGraphWithin :many
 SELECT
-    v.vertex_id,
-    v.edges
-FROM vertex_agg v
-WHERE st_within(v.location,$1)
-ORDER BY v.vertex_id
+    v.vid AS vertex_id,
+    e.edge_id,
+    e.start_vid,
+    e.neighbour_id,
+    e.length,
+    e.road_type,
+    e.surface_type,
+    e.viewsheds,
+    e.shape
+FROM vertices v
+INNER JOIN edge_agg e ON e.start_vid = v.vid
+WHERE st_within(v.location, $1)
+ORDER BY v.vid, e.edge_id
 `
 
 type GetGraphWithinRow struct {
-	VertexID int32
-	Edges    []EdgeAgg
+	VertexID    int32
+	EdgeID      int32
+	StartVid    int32
+	NeighbourID int32
+	Length      float64
+	RoadType    schema.ObjectType
+	SurfaceType schema.SurfaceType
+	Viewsheds   []pgtype.Bits
+	Shape       *geom.LineString
 }
 
 func (q *Queries) GetGraphWithin(ctx context.Context, stWithin interface{}) ([]GetGraphWithinRow, error) {
@@ -116,7 +141,17 @@ func (q *Queries) GetGraphWithin(ctx context.Context, stWithin interface{}) ([]G
 	var items []GetGraphWithinRow
 	for rows.Next() {
 		var i GetGraphWithinRow
-		if err := rows.Scan(&i.VertexID, &i.Edges); err != nil {
+		if err := rows.Scan(
+			&i.VertexID,
+			&i.EdgeID,
+			&i.StartVid,
+			&i.NeighbourID,
+			&i.Length,
+			&i.RoadType,
+			&i.SurfaceType,
+			&i.Viewsheds,
+			&i.Shape,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -23,9 +23,15 @@ type EdgeAgg struct {
 	StartVid    int32
 	NeighbourID int32
 	Length      float64
+	Shape       *geom.LineString
 	RoadType    schema.ObjectType
 	SurfaceType schema.SurfaceType
 	Viewsheds   []pgtype.Bits
+}
+
+type Path struct {
+	Pid   int32
+	Shape *geom.MultiLineString
 }
 
 type SamplePoint struct {
@@ -883,12 +889,6 @@ type TlmVersorgungsbautePkt struct {
 type Vertex struct {
 	Vid      int32
 	Location *geom.Point
-}
-
-type VertexAgg struct {
-	VertexID int32
-	Location interface{}
-	Edges    []EdgeAgg
 }
 
 type WorkArea struct {
