@@ -74,3 +74,10 @@ SELECT
 FROM vertex_agg v
 WHERE st_within(v.location,$1)
 ORDER BY v.vertex_id;
+
+-- name: GetClosestVertexWithin :one
+SELECT vid
+FROM vertices
+WHERE st_dwithin(location, sqlc.arg(point)::geometry, sqlc.arg(max_distance)::float8)
+ORDER BY location <-> sqlc.arg(point)::geometry
+LIMIT 1;

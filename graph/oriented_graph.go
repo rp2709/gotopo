@@ -9,9 +9,6 @@ import (
 	"github.com/rp2709/gotopo/gotopo"
 )
 
-type Vertex gotopo.GetGraphWithinRow
-type OrientedGraph []Vertex
-
 type Path []gotopo.EdgeAgg
 
 type Metric struct {
@@ -37,7 +34,7 @@ func (metrics Metrics) Evaluate(agg gotopo.EdgeAgg, t time.Time) float64 {
 	return result * agg.Length
 }
 
-func (g OrientedGraph) ShortestPath(from int32, to int32, t time.Time, metrics Metrics, measureDuration func(agg gotopo.EdgeAgg) time.Duration) (path Path, err error) {
+func ShortestPath(g []gotopo.GetGraphWithinRow, from int32, to int32, t time.Time, metrics Metrics, measureDuration func(agg gotopo.EdgeAgg) time.Duration) (path Path, err error) {
 	dist := make(map[int32]float64, len(g))
 	ts := make(map[int32]time.Time, len(g))
 	pred := make(map[int32]*gotopo.EdgeAgg, len(g))
@@ -48,7 +45,7 @@ func (g OrientedGraph) ShortestPath(from int32, to int32, t time.Time, metrics M
 	dist[from] = 0
 	ts[from] = t
 
-	L := make(map[int32]Vertex, len(g))
+	L := make(map[int32]gotopo.GetGraphWithinRow, len(g))
 	for _, u := range g {
 		L[u.VertexID] = u
 	}
@@ -92,7 +89,7 @@ func (g OrientedGraph) ShortestPath(from int32, to int32, t time.Time, metrics M
 	return path, nil
 }
 
-func popVertexWithSmallestDistance(queue map[int32]Vertex, distance map[int32]float64) Vertex {
+func popVertexWithSmallestDistance(queue map[int32]gotopo.GetGraphWithinRow, distance map[int32]float64) gotopo.GetGraphWithinRow {
 	// find vertex with smallest distance from start
 	minDist := math.MaxFloat64
 	var minVertexId int32 = -1

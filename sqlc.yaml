@@ -97,7 +97,7 @@ sql:
             go_type:
               import: "github.com/rp2709/gotopo/schema"
               package: "schema"
-              type: "RoadType"
+              type: "ObjectType"
 
           - column: "edge_agg.surface_type"
             go_type:

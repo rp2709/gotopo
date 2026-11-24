@@ -73,6 +73,26 @@ func (q *Queries) GetAllEdges(ctx context.Context) ([]GetAllEdgesRow, error) {
 	return items, nil
 }
 
+const getClosestVertexWithin = `-- name: GetClosestVertexWithin :one
+SELECT vid
+FROM vertices
+WHERE st_dwithin(location, $1::geometry, $2::float8)
+ORDER BY location <-> $1::geometry
+LIMIT 1
+`
+
+type GetClosestVertexWithinParams struct {
+	Point       interface{}
+	MaxDistance float64
+}
+
+func (q *Queries) GetClosestVertexWithin(ctx context.Context, arg GetClosestVertexWithinParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getClosestVertexWithin, arg.Point, arg.MaxDistance)
+	var vid int32
+	err := row.Scan(&vid)
+	return vid, err
+}
+
 const getGraphWithin = `-- name: GetGraphWithin :many
 SELECT
     v.vertex_id,

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/rp2709/gotopo/gotopo"
+	"github.com/rp2709/gotopo/graph"
 	"github.com/rp2709/gotopo/graph_construction"
 	"github.com/rp2709/gotopo/sample_edges"
 	"github.com/rp2709/gotopo/viewsheds_generation"
@@ -18,24 +19,28 @@ const (
 	commandConstructGraph command = iota
 	commandSampleEdges
 	viewsheds
+	path
 )
 
 var commandFromName = map[string]command{
 	"construct-graph": commandConstructGraph,
 	"sample-edges":    commandSampleEdges,
 	"viewsheds":       viewsheds,
+	"path":            path,
 }
 
 var commandToName = map[command]string{
 	commandConstructGraph: "construct-graph",
 	commandSampleEdges:    "sample-edges",
 	viewsheds:             "viewsheds",
+	path:                  "path",
 }
 
 var commandDescription = map[command]string{
 	commandConstructGraph: "Construct complete, oriented graph from isolated road polylines",
 	commandSampleEdges:    "Sample each edge of the graph at a fixed interval",
 	viewsheds:             "Perform actions related to viewsheds, see \"gotopo viewsheds --help\".",
+	path:                  "Actions related to paths in the cycling graph",
 }
 
 type commandFunction func(config gotopo.DatabaseConfig, args []string) error
@@ -44,6 +49,7 @@ var commandEntryPoint = map[command]commandFunction{
 	commandConstructGraph: graph_construction.Run,
 	commandSampleEdges:    sample_edges.Run,
 	viewsheds:             viewsheds_generation.Run,
+	path:                  graph.Run,
 }
 
 func main() {

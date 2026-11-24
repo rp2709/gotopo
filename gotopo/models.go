@@ -23,7 +23,7 @@ type EdgeAgg struct {
 	StartVid    int32
 	NeighbourID int32
 	Length      float64
-	RoadType    schema.RoadType
+	RoadType    schema.ObjectType
 	SurfaceType schema.SurfaceType
 	Viewsheds   []pgtype.Bits
 }
