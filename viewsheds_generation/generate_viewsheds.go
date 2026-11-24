@@ -52,7 +52,8 @@ func Run(databaseConfig gotopo.DatabaseConfig, args []string) error {
 	var viewshedConfig viewshedsConfigT
 	flags := flag.NewFlagSet("viewsheds", flag.ExitOnError)
 	flags.Usage = usage(flags)
-	flags.StringVar(&viewshedConfig.VrtFilePath, "vrt", "", "Path to .vrt file indexing the surface model's tiles")
+	flags.StringVar(&viewshedConfig.DSMFilePath, "dsm", "", "Path to .vrt file indexing the surface model's tiles")
+	flags.StringVar(&viewshedConfig.DEMFilePath, "dem", "", "Path to .dem file indexing the elevation model's tiles")
 	flags.Float64Var(&viewshedConfig.MaxDistance, "max-distance", 40000, "maximum distance to explore from each sample point")
 	flags.Float64Var(&viewshedConfig.MaxAltitude, "max-altitude", 4600, "maximum altitude the terrain may reach")
 
@@ -89,7 +90,8 @@ func usage(viewshedsFlags *flag.FlagSet) func() {
 }
 
 type viewshedsConfigT struct {
-	VrtFilePath string
+	DSMFilePath string
+	DEMFilePath string
 	MaxDistance float64
 	MaxAltitude float64
 }

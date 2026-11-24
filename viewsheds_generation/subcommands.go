@@ -23,21 +23,33 @@ func doVisualizeViewsheds(_ gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 		return err
 	}
 
-	ds, err := vrt_reader.OpenDataset(viewshedConfig.VrtFilePath, 0)
+	dsm, err := vrt_reader.OpenDataset(viewshedConfig.DSMFilePath, 0)
+	if err != nil {
+		return err
+	}
+
+	dem, err := vrt_reader.OpenDataset(viewshedConfig.DEMFilePath, 0)
 	if err != nil {
 		return err
 	}
 
 	point := *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{*x, *y})
 
-	ds.LoadArea(
+	dsm.LoadArea(
 		point.X()-viewshedConfig.MaxDistance,
 		point.X()+viewshedConfig.MaxDistance,
 		point.Y()-viewshedConfig.MaxDistance,
 		point.Y()+viewshedConfig.MaxDistance,
 	)
 
-	vsb := viewshed(ds, point, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
+	dem.LoadArea(
+		point.X(),
+		point.X(),
+		point.Y(),
+		point.Y(),
+	)
+
+	vsb := viewshed(dsm, dem, point, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
 	return VisualizeViewshed(
 		"viewshed.png",
 		vsb.toBits(),
@@ -58,7 +70,12 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 	}
 	defer conn.Close(context.Background())
 
-	ds, err := vrt_reader.OpenDataset(viewshedConfig.VrtFilePath, 0)
+	dsm, err := vrt_reader.OpenDataset(viewshedConfig.DSMFilePath, 0)
+	if err != nil {
+		return err
+	}
+
+	dem, err := vrt_reader.OpenDataset(viewshedConfig.DEMFilePath, 0)
 	if err != nil {
 		return err
 	}
@@ -71,16 +88,23 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 		}
 		bounds := workArea.Shape.Bounds()
 
-		ds.LoadArea(
+		dsm.LoadArea(
 			bounds.Min(0)-viewshedConfig.MaxDistance,
 			bounds.Max(0)+viewshedConfig.MaxDistance,
 			bounds.Min(1)-viewshedConfig.MaxDistance,
-			bounds.Min(1)+viewshedConfig.MaxDistance,
+			bounds.Max(1)+viewshedConfig.MaxDistance,
+		)
+
+		dem.LoadArea(
+			bounds.Min(0),
+			bounds.Max(0),
+			bounds.Min(1),
+			bounds.Max(1),
 		)
 
 		slog.Info("Calculating viewsheds", "samples", len(points))
 		for _, point := range points {
-			_ = viewshed(ds, *point.Location, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
+			_ = viewshed(dsm, dem, *point.Location, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
 		}
 
 		slog.Info("Marking area as done", "Area", workArea.Num)
