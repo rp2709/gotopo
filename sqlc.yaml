@@ -48,6 +48,12 @@ sql:
               package: "schema"
               type: "ObjectType"
 
+          - column: "tlm_strasse.belagsart"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "SurfaceType"
+
           - column: "tlm_strasse.verkehrsbeschraenkung"
             go_type:
               import: "github.com/rp2709/gotopo/schema"
@@ -72,3 +78,29 @@ sql:
               package: "geom"
               type: "Point"
               pointer: true
+
+          - column: "edge_agg.length"
+            go_type:
+              type: "float64"
+
+          - column: "edge_agg.viewsheds"
+            go_type:
+              type: "pgtype.Bits"
+              slice: true
+
+          - column: "vertex_agg.edges"
+            go_type:
+              type: "EdgeAgg"
+              slice: true
+
+          - column: "edge_agg.road_type"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "RoadType"
+
+          - column: "edge_agg.surface_type"
+            go_type:
+              import: "github.com/rp2709/gotopo/schema"
+              package: "schema"
+              type: "SurfaceType"

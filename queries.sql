@@ -66,3 +66,11 @@ UPDATE work_area SET done = $1 WHERE num = $2;
 
 -- name: UpdateSamplePoint :exec
 UPDATE sample_point SET viewshed = $1;
+
+-- name: GetGraphWithin :many
+SELECT
+    v.vertex_id,
+    v.edges
+FROM vertex_agg v
+WHERE st_within(v.location,$1)
+ORDER BY v.vertex_id;

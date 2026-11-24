@@ -18,6 +18,16 @@ type Edge struct {
 	Shape    *geom.LineString
 }
 
+type EdgeAgg struct {
+	EdgeID      int32
+	StartVid    int32
+	NeighbourID int32
+	Length      float64
+	RoadType    schema.RoadType
+	SurfaceType schema.SurfaceType
+	Viewsheds   []pgtype.Bits
+}
+
 type SamplePoint struct {
 	Sid      int32
 	Eid      int32
@@ -642,7 +652,7 @@ type TlmStrasse struct {
 	Eroeffnungsdatum      pgtype.Timestamptz
 	Stufe                 pgtype.Int4
 	Richtungsgetrennt     schema.TlmBool
-	Belagsart             pgtype.Int4
+	Belagsart             schema.SurfaceType
 	Kreisel               schema.TlmBool
 	Eigentuemer           pgtype.Int4
 	Verkehrsbedeutung     pgtype.Int4
@@ -873,6 +883,12 @@ type TlmVersorgungsbautePkt struct {
 type Vertex struct {
 	Vid      int32
 	Location *geom.Point
+}
+
+type VertexAgg struct {
+	VertexID int32
+	Location interface{}
+	Edges    []EdgeAgg
 }
 
 type WorkArea struct {

@@ -56,6 +56,15 @@ const (
 	TRAFIC_RESTRICTION_PAS_DE_VALEUR TraficRestriction = 999998
 )
 
+type SurfaceType int
+
+const (
+	SURFACE_DURE SurfaceType = 100 * (iota + 1)
+	SURFACE_NATURE
+	SURFACE_INCONNU       SurfaceType = 999997
+	SURFACE_PAS_DE_VALEUR SurfaceType = 999998
+)
+
 type TlmBool int
 
 const (

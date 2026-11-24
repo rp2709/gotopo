@@ -73,6 +73,40 @@ func (q *Queries) GetAllEdges(ctx context.Context) ([]GetAllEdgesRow, error) {
 	return items, nil
 }
 
+const getGraphWithin = `-- name: GetGraphWithin :many
+SELECT
+    v.vertex_id,
+    v.edges
+FROM vertex_agg v
+WHERE st_within(v.location,$1)
+ORDER BY v.vertex_id
+`
+
+type GetGraphWithinRow struct {
+	VertexID int32
+	Edges    []EdgeAgg
+}
+
+func (q *Queries) GetGraphWithin(ctx context.Context, stWithin interface{}) ([]GetGraphWithinRow, error) {
+	rows, err := q.db.Query(ctx, getGraphWithin, stWithin)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGraphWithinRow
+	for rows.Next() {
+		var i GetGraphWithinRow
+		if err := rows.Scan(&i.VertexID, &i.Edges); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getNextWorkArea = `-- name: GetNextWorkArea :one
 SELECT num, done, shape
 FROM work_area
