@@ -63,7 +63,19 @@ func doPrintDirections(_ gotopo.DatabaseConfig, _ viewshedsConfigT, _ []string) 
 	return writeDirections(os.Stdout, packingMethod.Directions())
 }
 
-func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfigT, _ []string) error {
+func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfigT, args []string) error {
+	flags := flag.NewFlagSet("generate", flag.ExitOnError)
+	inf := flags.Int("inf", 0, "minimum id of the work areas to consider")
+	sup := flags.Int("sup", math.MaxInt, "maximum id of the work areas to consider")
+	err := flags.Parse(args)
+	if err != nil {
+		return err
+	}
+	nextWorkAreaParams := gotopo.GetNextWorkAreaParams{
+		Inf: int32(*inf),
+		Sup: int32(*sup),
+	}
+
 	ctx := context.Background()
 	queries, conn, err := db.Connect(ctx)
 	if err != nil {
@@ -82,7 +94,7 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 	}
 
 	var workArea gotopo.WorkArea
-	for workArea, err = queries.GetNextWorkArea(ctx); err == nil; workArea, err = queries.GetNextWorkArea(ctx) {
+	for workArea, err = queries.GetNextWorkArea(ctx, nextWorkAreaParams); err == nil; workArea, err = queries.GetNextWorkArea(ctx, nextWorkAreaParams) {
 		points, err := queries.GetSamplePointsWithin(ctx, workArea.Shape)
 		if err != nil {
 			return err

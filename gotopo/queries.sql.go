@@ -165,14 +165,21 @@ func (q *Queries) GetGraphWithin(ctx context.Context, stWithin interface{}) ([]G
 
 const getNextWorkArea = `-- name: GetNextWorkArea :one
 SELECT num, done, shape
-FROM work_area
+FROM work_area w
 WHERE NOT done
+    AND w.num >= $1
+    AND w.num <= $2
 ORDER BY num
 LIMIT 1
 `
 
-func (q *Queries) GetNextWorkArea(ctx context.Context) (WorkArea, error) {
-	row := q.db.QueryRow(ctx, getNextWorkArea)
+type GetNextWorkAreaParams struct {
+	Inf int32
+	Sup int32
+}
+
+func (q *Queries) GetNextWorkArea(ctx context.Context, arg GetNextWorkAreaParams) (WorkArea, error) {
+	row := q.db.QueryRow(ctx, getNextWorkArea, arg.Inf, arg.Sup)
 	var i WorkArea
 	err := row.Scan(&i.Num, &i.Done, &i.Shape)
 	return i, err
@@ -223,6 +230,25 @@ func (q *Queries) GetRoads(ctx context.Context) ([]GetRoadsRow, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getSamplePoint = `-- name: GetSamplePoint :one
+SELECT
+    sid, eid, location, viewshed
+FROM sample_point
+WHERE sid = $1
+`
+
+func (q *Queries) GetSamplePoint(ctx context.Context, sid int32) (SamplePoint, error) {
+	row := q.db.QueryRow(ctx, getSamplePoint, sid)
+	var i SamplePoint
+	err := row.Scan(
+		&i.Sid,
+		&i.Eid,
+		&i.Location,
+		&i.Viewshed,
+	)
+	return i, err
 }
 
 const getSamplePointsWithin = `-- name: GetSamplePointsWithin :many
@@ -324,15 +350,6 @@ func (q *Queries) SamplePointsExtent(ctx context.Context) (geom.Polygon, error) 
 	var extent geom.Polygon
 	err := row.Scan(&extent)
 	return extent, err
-}
-
-const updateSamplePoint = `-- name: UpdateSamplePoint :exec
-UPDATE sample_point SET viewshed = $1
-`
-
-func (q *Queries) UpdateSamplePoint(ctx context.Context, viewshed pgtype.Bits) error {
-	_, err := q.db.Exec(ctx, updateSamplePoint, viewshed)
-	return err
 }
 
 const updateWorkArea = `-- name: UpdateWorkArea :exec

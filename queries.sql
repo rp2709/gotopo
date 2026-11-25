@@ -61,16 +61,15 @@ VALUES ($1,$2);
 
 -- name: GetNextWorkArea :one
 SELECT *
-FROM work_area
+FROM work_area w
 WHERE NOT done
+    AND w.num >= sqlc.arg(inf)
+    AND w.num <= sqlc.arg(sup)
 ORDER BY num
 LIMIT 1;
 
 -- name: UpdateWorkArea :exec
 UPDATE work_area SET done = $1 WHERE num = $2;
-
--- name: UpdateSamplePoint :exec
-UPDATE sample_point SET viewshed = $1;
 
 -- name: GetGraphWithin :many
 SELECT
@@ -98,3 +97,9 @@ LIMIT 1;
 -- name: AddPath :exec
 INSERT INTO paths (shape)
 VALUES(st_linemerge($1));
+
+-- name: GetSamplePoint :one
+SELECT
+    *
+FROM sample_point
+WHERE sid = $1;

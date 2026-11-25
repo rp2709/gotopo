@@ -28,7 +28,7 @@ var commandFromName = map[string]command{
 
 var commandDescription = map[command]string{
 	printDirections: "Computes all the direction vectors used to generate viewsheds and prints them as a list of vectors to stdout in this format: size(x,y,z),...,(x,y,z),",
-	visualize:       "Generate one viewshed at specified coordinates and produces an image",
+	visualize:       "Generate one viewshed at specified coordinates or sample point and produces an image",
 	createWorkAreas: "Divides the extent of all samples in manageable work areas.",
 	generate:        "Generate a hemispherical viewshed of arbitrary precision every sample point using a digital surface model",
 }
