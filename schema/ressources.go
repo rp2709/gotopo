@@ -4,6 +4,7 @@ import "embed"
 
 //go:embed v2_graph_tables.sql
 //go:embed v3_sample_points.sql
+//go:embed v4_work_areas.sql
 var schema embed.FS
 
 func GraphSchema() string {
@@ -23,7 +24,7 @@ func SamplePointsSchema() string {
 }
 
 func WorkAreasSchema() string {
-	bytes, err := schema.ReadFile("v3_work_areas.sql")
+	bytes, err := schema.ReadFile("v4_work_areas.sql")
 	if err != nil {
 		panic(err)
 	}
