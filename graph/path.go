@@ -38,7 +38,7 @@ func Run(db gotopo.DatabaseConfig, _ []string) error {
 	}
 	slog.Info("found ending vertex", "vertex_id", endVertex)
 
-	margin := 10000.0
+	margin := 5000.0
 
 	minX := min(startPoint.X(), endPoint.X()) - margin
 	minY := min(startPoint.Y(), endPoint.Y()) - margin

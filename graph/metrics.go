@@ -49,7 +49,8 @@ func sunExposureMetric(e gotopo.EdgeAgg, t time.Time) float64 {
 		return 0
 	}
 
-	edgeCenter := geom.NewPoint(geom.XY).SetSRID(e.Shape.SRID()).MustSetCoords(e.Shape.Coord(e.Shape.NumCoords() / 2))
+	centerCoord := e.Shape.Coord(e.Shape.NumCoords() / 2)
+	edgeCenter := geom.NewPoint(geom.XY).SetSRID(e.Shape.SRID()).MustSetCoords(geom.Coord{centerCoord.X(), centerCoord.Y()})
 	azimuth, altitude := sg2.SunPosition(*edgeCenter, t)
 	packingMethod := viewsheds_generation.DefaultEvenPackingMethod
 
