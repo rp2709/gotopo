@@ -85,10 +85,11 @@ func surfaceTypeMetric(e gotopo.EdgeAgg, _ time.Time) float64 {
 
 func slopeMetric(e gotopo.EdgeAgg, _ time.Time) float64 {
 	slopeScore := 0.0
+	coords := e.Shape.Coords()
 	for i := 0; i < e.Shape.NumCoords()-1; i++ {
 		currentAlti := e.Shape.FlatCoords()[i*e.Shape.Stride()+2]
 		nextAlti := e.Shape.FlatCoords()[(i+1)*e.Shape.Stride()+2]
-		dx, dy := e.Shape.Coords()[i+1].X()-e.Shape.Coords()[i].X(), e.Shape.Coords()[i+1].Y()-e.Shape.Coords()[i].Y()
+		dx, dy := coords[i+1].X()-coords[i].X(), coords[i+1].Y()-coords[i].Y()
 		slope := (nextAlti - currentAlti) / math.Sqrt(dx*dx+dy*dy)
 		if slope > 0 {
 			slopeScore += slope
