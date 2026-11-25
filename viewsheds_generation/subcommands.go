@@ -3,6 +3,7 @@ package viewsheds_generation
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"math"
 	"os"
@@ -14,46 +15,66 @@ import (
 	"github.com/twpayne/go-geom"
 )
 
-func doVisualizeViewsheds(_ gotopo.DatabaseConfig, viewshedConfig viewshedsConfigT, args []string) error {
+func doVisualizeViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfigT, args []string) error {
 	flags := flag.NewFlagSet("visualize", flag.ExitOnError)
 	x := flags.Float64("X", 2531882.927, "x coordinate of test point")
 	y := flags.Float64("Y", 1184492.072, "y coordinate of test point")
 	size := flags.Int("size", 800, "size of the image in pixels")
+	output := flags.String("output", "viewshed.png", "output file name")
+	samplePointId := flags.Int("sample-point-id", -1, "id of the sample point (takes priority over point viewshed if specified, errors if viewshed is null)")
 	err := flags.Parse(args)
 	if err != nil {
 		return err
 	}
 
-	dsm, err := vrt_reader.OpenDataset(viewshedConfig.DSMFilePath, 0)
-	if err != nil {
-		return err
+	var vsb pgtype.Bits
+	if *samplePointId == -1 {
+		dsm, err := vrt_reader.OpenDataset(viewshedConfig.DSMFilePath, 0)
+		if err != nil {
+			return err
+		}
+
+		dem, err := vrt_reader.OpenDataset(viewshedConfig.DEMFilePath, 0)
+		if err != nil {
+			return err
+		}
+
+		point := *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{*x, *y})
+
+		dsm.LoadArea(
+			point.X()-viewshedConfig.MaxDistance,
+			point.X()+viewshedConfig.MaxDistance,
+			point.Y()-viewshedConfig.MaxDistance,
+			point.Y()+viewshedConfig.MaxDistance,
+		)
+
+		dem.LoadArea(
+			point.X(),
+			point.X(),
+			point.Y(),
+			point.Y(),
+		)
+		vsb = viewshed(dsm, dem, point, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod).toBits()
+	} else {
+		ctx := context.Background()
+		queries, conn, err := db.Connect(ctx)
+		if err != nil {
+			return err
+		}
+		defer conn.Close(context.Background())
+		samplePoint, err := queries.GetSamplePoint(ctx, int32(*samplePointId))
+		if err != nil {
+			return err
+		}
+		vsb = samplePoint.Viewshed
+		if !vsb.Valid {
+			return fmt.Errorf("sample point does not have a viewshed")
+		}
 	}
 
-	dem, err := vrt_reader.OpenDataset(viewshedConfig.DEMFilePath, 0)
-	if err != nil {
-		return err
-	}
-
-	point := *geom.NewPoint(geom.XY).SetSRID(2056).MustSetCoords(geom.Coord{*x, *y})
-
-	dsm.LoadArea(
-		point.X()-viewshedConfig.MaxDistance,
-		point.X()+viewshedConfig.MaxDistance,
-		point.Y()-viewshedConfig.MaxDistance,
-		point.Y()+viewshedConfig.MaxDistance,
-	)
-
-	dem.LoadArea(
-		point.X(),
-		point.X(),
-		point.Y(),
-		point.Y(),
-	)
-
-	vsb := viewshed(dsm, dem, point, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
 	return VisualizeViewshed(
-		"viewshed.png",
-		vsb.toBits(),
+		*output,
+		vsb,
 		*size,
 		packingMethod,
 	)
