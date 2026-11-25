@@ -21,3 +21,11 @@ func SamplePointsSchema() string {
 	}
 	return string(bytes)
 }
+
+func WorkAreasSchema() string {
+	bytes, err := schema.ReadFile("v3_work_areas.sql")
+	if err != nil {
+		panic(err)
+	}
+	return string(bytes)
+}

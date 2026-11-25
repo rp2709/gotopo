@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/twpayne/go-geom"
-	"github.com/twpayne/go-proj/v11"
 )
 
 // SunPosition returns the Sun's azimuth and geometric altitude, in degrees,
@@ -64,6 +63,8 @@ const (
 	_SRIDWGS84 = 4326
 )
 
+// ToWGS84 converts a point from Swiss LV95 (EPSG:2056)
+// to WGS84 longitude/latitude (EPSG:4326).
 func toWGS84(point *geom.Point) (*geom.Point, error) {
 	if point == nil {
 		return nil, fmt.Errorf("point cannot be nil")
@@ -74,28 +75,39 @@ func toWGS84(point *geom.Point) (*geom.Point, error) {
 			_SRIDLV95, point.SRID())
 	}
 
-	transformer, err := proj.NewCRSToCRS(
-		"EPSG:2056",
-		"EPSG:4326",
-		nil,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("create transformer: %w", err)
-	}
+	// LV95 coordinates:
+	// X = Easting
+	// Y = Northing
+	e := point.X()
+	n := point.Y()
 
-	coord, err := transformer.Forward(
-		proj.NewCoord(point.X(), point.Y(), 0, 0),
-	)
-	if err != nil {
-		return nil, fmt.Errorf("transform coordinate: %w", err)
-	}
+	// Convert to the auxiliary Swiss coordinate system.
+	y := (e - 2600000.0) / 1000000.0
+	x := (n - 1200000.0) / 1000000.0
 
+	// Longitude in units of 10,000 arc-seconds.
+	lon := 2.6779094 +
+		4.728982*y +
+		0.791484*y*x +
+		0.1306*y*x*x -
+		0.0436*y*y*y
+
+	// Latitude in units of 10,000 arc-seconds.
+	lat := 16.9023892 +
+		3.238272*x -
+		0.270978*y*y -
+		0.002528*x*x -
+		0.0447*y*y*x -
+		0.0140*x*x*x
+
+	// Convert to decimal degrees.
+	lon *= 100.0 / 36.0
+	lat *= 100.0 / 36.0
+
+	// Return a new point (longitude, latitude).
 	return geom.NewPoint(geom.XY).
 		SetSRID(_SRIDWGS84).
-		MustSetCoords(geom.Coord{
-			coord.X(),
-			coord.Y(),
-		}), nil
+		MustSetCoords(geom.Coord{lon, lat}), nil
 }
 
 func finite(v float64) bool {

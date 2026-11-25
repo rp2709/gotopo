@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rp2709/gotopo/gotopo"
+	"github.com/rp2709/gotopo/schema"
 	"github.com/rp2709/gotopo/vrt_reader"
 	"github.com/twpayne/go-geom"
 )
@@ -181,7 +182,8 @@ func doCreateWorkAreas(db gotopo.DatabaseConfig, _ viewshedsConfigT, args []stri
 	println("Areas with sample points: ", len(areas))
 	println("Average samples per area: ", totalSamples/uint64(len(areas)))
 
-	if err = queries.ClearWorkAreas(ctx); err != nil {
+	_, err = conn.Exec(ctx, schema.WorkAreasSchema())
+	if err != nil {
 		return err
 	}
 
