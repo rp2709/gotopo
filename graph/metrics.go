@@ -6,6 +6,9 @@ import (
 
 	"github.com/rp2709/gotopo/gotopo"
 	"github.com/rp2709/gotopo/schema"
+	"github.com/rp2709/gotopo/sg2"
+	"github.com/rp2709/gotopo/viewsheds_generation"
+	"github.com/twpayne/go-geom"
 )
 
 var roadTypeScores = map[schema.ObjectType]float64{
@@ -41,6 +44,32 @@ var surfaceTypeScores = map[schema.SurfaceType]float64{
 	schema.SURFACE_PAS_DE_VALEUR: 0.4,
 }
 
+func sunExposureMetric(e gotopo.EdgeAgg, t time.Time) float64 {
+	if len(e.Viewsheds) == 0 {
+		return 0
+	}
+
+	edgeCenter := geom.NewPoint(geom.XY).SetSRID(e.Shape.SRID()).MustSetCoords(e.Shape.Coord(e.Shape.NumCoords() / 2))
+	azimuth, altitude := sg2.SunPosition(*edgeCenter, t)
+	packingMethod := viewsheds_generation.DefaultEvenPackingMethod
+
+	score := 0.0
+	validNb := 0
+	for _, vs := range e.Viewsheds {
+		if !vs.Valid {
+			continue
+		}
+		validNb++
+		score += 1.0 - packingMethod.Interpolate(vs, azimuth, altitude)
+	}
+
+	if validNb == 0 {
+		return 0
+	}
+
+	return score / float64(validNb)
+}
+
 func distanceMetric(e gotopo.EdgeAgg, _ time.Time) float64 {
 	return 1.0
 }
@@ -73,22 +102,27 @@ var DefaultMetrics = Metrics{
 	Metric{
 		name:     "distance",
 		evaluate: distanceMetric,
-		weight:   0.25,
+		weight:   0.20,
 	},
 	Metric{
 		name:     "road type",
 		evaluate: roadTypeMetric,
-		weight:   0.25,
+		weight:   0.20,
 	},
 	Metric{
 		name:     "surface type",
 		evaluate: surfaceTypeMetric,
-		weight:   0.25,
+		weight:   0.20,
 	},
 	Metric{
 		name:     "slope",
 		evaluate: slopeMetric,
-		weight:   0.25,
+		weight:   0.20,
+	},
+	Metric{
+		name:     "sun exposure",
+		evaluate: sunExposureMetric,
+		weight:   0.20,
 	},
 }
 

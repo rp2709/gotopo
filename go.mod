@@ -6,6 +6,7 @@ require (
 	github.com/jackc/pgx/v5 v5.12.0
 	github.com/rp2709/geotiff v0.0.5
 	github.com/twpayne/go-geom v1.7.0
+	github.com/twpayne/go-proj/v11 v11.1.0
 	github.com/twpayne/pgx-geom v1.0.0
 )
 

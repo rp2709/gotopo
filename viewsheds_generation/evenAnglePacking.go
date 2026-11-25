@@ -6,6 +6,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const viewshedSizeBits = 128
+const minimumAngleFromHorizon = math.Pi / 12
+const minimumAngleFromZenith = math.Pi / 12
+
+var DefaultEvenPackingMethod PackingMethod = NewEvenAnglePacking(viewshedSizeBits, minimumAngleFromZenith, minimumAngleFromHorizon)
+
 // EvenAnglePacking maps a grid of directions (nbStepsZenith rows x
 // nbStepsAzimuth columns) onto the bits of a Postgres bit string.
 //

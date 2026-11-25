@@ -3,17 +3,12 @@ package viewsheds_generation
 import (
 	"flag"
 	"fmt"
-	"math"
 	"os"
 
 	"github.com/rp2709/gotopo/gotopo"
 )
 
-const viewshedSizeBits = 128
-const minimumAngleFromHorizon = math.Pi / 12
-const minimumAngleFromZenith = math.Pi / 12
-
-var packingMethod PackingMethod = NewEvenAnglePacking(viewshedSizeBits, minimumAngleFromZenith, minimumAngleFromHorizon)
+var packingMethod PackingMethod = DefaultEvenPackingMethod
 
 type command int
 
