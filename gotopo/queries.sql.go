@@ -23,15 +23,6 @@ func (q *Queries) AddPath(ctx context.Context, stLinemerge interface{}) error {
 	return err
 }
 
-const clearWorkAreas = `-- name: ClearWorkAreas :exec
-DELETE FROM work_area
-`
-
-func (q *Queries) ClearWorkAreas(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, clearWorkAreas)
-	return err
-}
-
 const deleteAllEdges = `-- name: DeleteAllEdges :exec
 DELETE
 FROM edges
@@ -49,6 +40,16 @@ FROM vertices
 
 func (q *Queries) DeleteAllVertices(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, deleteAllVertices)
+	return err
+}
+
+const deleteSamplePointsWithoutViewshedsWithin = `-- name: DeleteSamplePointsWithoutViewshedsWithin :exec
+DELETE FROM sample_point
+WHERE st_within(location,$1) AND viewshed IS NULL
+`
+
+func (q *Queries) DeleteSamplePointsWithoutViewshedsWithin(ctx context.Context, stWithin interface{}) error {
+	_, err := q.db.Exec(ctx, deleteSamplePointsWithoutViewshedsWithin, stWithin)
 	return err
 }
 
@@ -296,6 +297,12 @@ type InsertEdgeParams struct {
 type InsertSamplePointParams struct {
 	Eid      int32
 	Location *geom.Point
+}
+
+type InsertSamplePointWithViewshedParams struct {
+	Eid      int32
+	Location *geom.Point
+	Viewshed pgtype.Bits
 }
 
 type InsertVertexParams struct {

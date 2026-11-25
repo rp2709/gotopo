@@ -34,6 +34,14 @@ FROM edges;
 INSERT INTO sample_point (eid, location)
 VALUES ($1, $2);
 
+-- name: InsertSamplePointWithViewshed :copyfrom
+INSERT INTO sample_point (eid,location,viewshed)
+VALUES($1,$2,$3);
+
+-- name: DeleteSamplePointsWithoutViewshedsWithin :exec
+DELETE FROM sample_point
+WHERE st_within(location,$1) AND viewshed IS NULL;
+
 -- name: SamplePointsExtent :one
 SELECT * FROM sample_point_extent;
 
@@ -46,9 +54,6 @@ LIMIT $1;
 SELECT *
 FROM sample_point
 WHERE st_within(location,$1);
-
--- name: ClearWorkAreas :exec
-DELETE FROM work_area;
 
 -- name: InsertWorkAreas :copyfrom
 INSERT INTO work_area (num, shape)

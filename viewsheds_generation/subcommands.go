@@ -105,7 +105,27 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 
 		slog.Info("Calculating viewsheds", "samples", len(points))
 		for _, point := range points {
-			_ = viewshed(dsm, dem, *point.Location, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod)
+			point.Viewshed = viewshed(dsm, dem, *point.Location, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod).toBits()
+		}
+
+		slog.Info("Saving viewsheds", "samples", len(points))
+		params := make([]gotopo.InsertSamplePointWithViewshedParams, len(points))
+		for i, point := range points {
+			params[i] = gotopo.InsertSamplePointWithViewshedParams{
+				Eid:      point.Eid,
+				Location: point.Location,
+				Viewshed: point.Viewshed,
+			}
+		}
+
+		_, err = queries.InsertSamplePointWithViewshed(ctx, params)
+		if err != nil {
+			return err
+		}
+
+		err = queries.DeleteSamplePointsWithoutViewshedsWithin(ctx, workArea.Shape)
+		if err != nil {
+			return err
 		}
 
 		slog.Info("Marking area as done", "Area", workArea.Num)

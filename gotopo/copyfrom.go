@@ -77,6 +77,40 @@ func (q *Queries) InsertSamplePoint(ctx context.Context, arg []InsertSamplePoint
 	return q.db.CopyFrom(ctx, []string{"sample_point"}, []string{"eid", "location"}, &iteratorForInsertSamplePoint{rows: arg})
 }
 
+// iteratorForInsertSamplePointWithViewshed implements pgx.CopyFromSource.
+type iteratorForInsertSamplePointWithViewshed struct {
+	rows                 []InsertSamplePointWithViewshedParams
+	skippedFirstNextCall bool
+}
+
+func (r *iteratorForInsertSamplePointWithViewshed) Next() bool {
+	if len(r.rows) == 0 {
+		return false
+	}
+	if !r.skippedFirstNextCall {
+		r.skippedFirstNextCall = true
+		return true
+	}
+	r.rows = r.rows[1:]
+	return len(r.rows) > 0
+}
+
+func (r iteratorForInsertSamplePointWithViewshed) Values() ([]interface{}, error) {
+	return []interface{}{
+		r.rows[0].Eid,
+		r.rows[0].Location,
+		r.rows[0].Viewshed,
+	}, nil
+}
+
+func (r iteratorForInsertSamplePointWithViewshed) Err() error {
+	return nil
+}
+
+func (q *Queries) InsertSamplePointWithViewshed(ctx context.Context, arg []InsertSamplePointWithViewshedParams) (int64, error) {
+	return q.db.CopyFrom(ctx, []string{"sample_point"}, []string{"eid", "location", "viewshed"}, &iteratorForInsertSamplePointWithViewshed{rows: arg})
+}
+
 // iteratorForInsertVertex implements pgx.CopyFromSource.
 type iteratorForInsertVertex struct {
 	rows                 []InsertVertexParams
