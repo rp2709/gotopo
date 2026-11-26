@@ -104,11 +104,13 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 	}
 	defer conn.Close(context.Background())
 
+	slog.Info("Opening surface model", "path", viewshedConfig.DSMFilePath)
 	dsm, err := vrt_reader.OpenDataset(viewshedConfig.DSMFilePath, 0)
 	if err != nil {
 		return err
 	}
 
+	slog.Info("Opening elevation model", "path", viewshedConfig.DEMFilePath)
 	dem, err := vrt_reader.OpenDataset(viewshedConfig.DEMFilePath, 0)
 	if err != nil {
 		return err
@@ -116,6 +118,7 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 
 	var workArea gotopo.WorkArea
 	for workArea, err = queries.GetNextWorkArea(ctx, nextWorkAreaParams); err == nil; workArea, err = queries.GetNextWorkArea(ctx, nextWorkAreaParams) {
+		slog.Info("reading sample points", "area", workArea.Num)
 		points, err := queries.GetSamplePointsWithin(ctx, workArea.Shape)
 		if err != nil {
 			return err
