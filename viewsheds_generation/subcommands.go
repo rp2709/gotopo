@@ -125,13 +125,7 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 		}
 		bounds := workArea.Shape.Bounds()
 
-		dsm.LoadArea(
-			bounds.Min(0)-viewshedConfig.MaxDistance,
-			bounds.Max(0)+viewshedConfig.MaxDistance,
-			bounds.Min(1)-viewshedConfig.MaxDistance,
-			bounds.Max(1)+viewshedConfig.MaxDistance,
-		)
-
+		slog.Info("Loading dem area")
 		dem.LoadArea(
 			bounds.Min(0),
 			bounds.Max(0),
@@ -139,9 +133,18 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 			bounds.Max(1),
 		)
 
+		slog.Info("Loading dsm area")
+		dsm.LoadArea(
+			bounds.Min(0)-viewshedConfig.MaxDistance,
+			bounds.Max(0)+viewshedConfig.MaxDistance,
+			bounds.Min(1)-viewshedConfig.MaxDistance,
+			bounds.Max(1)+viewshedConfig.MaxDistance,
+		)
+
 		slog.Info("Calculating viewsheds", "samples", len(points))
-		for _, point := range points {
-			point.Viewshed = viewshed(dsm, dem, *point.Location, viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod).toBits()
+		for i := range points {
+			points[i].Viewshed = viewshed(dsm, dem, *points[i].Location,
+				viewshedConfig.MaxDistance, viewshedConfig.MaxAltitude, packingMethod).toBits()
 		}
 
 		slog.Info("Saving viewsheds", "samples", len(points))
@@ -173,7 +176,7 @@ func doGenerateViewsheds(db gotopo.DatabaseConfig, viewshedConfig viewshedsConfi
 			return err
 		}
 	}
-	return err
+	return nil
 }
 
 func doCreateWorkAreas(db gotopo.DatabaseConfig, _ viewshedsConfigT, args []string) error {
